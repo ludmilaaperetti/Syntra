@@ -8,6 +8,7 @@ import { ListaObjetivos } from '../../components/sesionEstudio/listaObjetivos';
 import { PanelPomodoro, type ConfiguracionPomodoro } from '../../components/sesionEstudio/panelPomodoro';
 import { TarjetaLateral } from '../../components/sesionEstudio/tarjetaLateral';
 import { TarjetaProximaSesion } from '../../components/sesionEstudio/tarjetaProximaSesion';
+import { PanelFlashcards } from '../../components/sesionEstudio/panelFlashcards';
 import { ModalConfirmar } from '../../components/sesionEstudio/modalConfirmar';
 import { ReproductorSpotify } from '../../components/spotify/reproductorSpotify';
 import { usarAvisos } from '../../hooks/usarAvisos';
@@ -241,6 +242,12 @@ export function SesionEstudioPage() {
                       onGuardarConfiguracion={guardarConfiguracion}
                     />
                   </TarjetaLateral>
+
+                  {sesion.idDeck !== null && (
+                    <TarjetaLateral titulo="Flashcards" id="flashcards">
+                      <PanelFlashcards usuarioId={usuarioId} idDeck={sesion.idDeck} />
+                    </TarjetaLateral>
+                  )}
 
                   <TarjetaLateral titulo="Spotify" id="spotify">
                     <ReproductorSpotify />

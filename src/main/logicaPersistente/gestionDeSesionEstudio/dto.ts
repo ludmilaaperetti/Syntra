@@ -17,6 +17,8 @@ export const crearSesionEstudioSchema = z.object({
   fechaProgramada: z.coerce.date(),
   recibirNotificacion: z.boolean().default(false),
   objetivos: z.array(z.string().trim().min(1).max(300)).max(50).default([]),
+  // Mazo de flashcards para repasar en la sesión (solo si se eligió el método Flashcards).
+  idDeck: idPositivo.nullable().default(null),
 });
 export type CrearSesionEstudioDTO = z.infer<typeof crearSesionEstudioSchema>;
 

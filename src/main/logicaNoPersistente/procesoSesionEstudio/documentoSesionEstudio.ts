@@ -1,10 +1,12 @@
 import HTMLtoDOCX from '@turbodocx/html-to-docx';
+import mammoth from 'mammoth';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Archivos } from '../../administracionDePersistencia/archivos';
 import { Nodos } from '../../administracionDePersistencia/nodo';
 import { Persistencia } from '../../persistencia/persistencia';
+import { Almacenamiento } from '../../persistencia/almacenamiento';
 import { Archivo } from '../../logicaPersistente/gestionMaterialEstudio/entidades';
 
 // Carpeta de Material (hija de la raíz) donde se guardan los Word de las sesiones.
@@ -16,7 +18,8 @@ export class DocumentoSesionEstudio {
   constructor(
     private readonly archivos: Archivos,
     private readonly nodos: Nodos,
-    private readonly persistencia: Persistencia
+    private readonly persistencia: Persistencia,
+    private readonly almacenamiento: Almacenamiento
   ) {}
 
   // Crea el .docx de la sesión en la carpeta "Sesiones de estudio" y devuelve su registro.
@@ -36,6 +39,25 @@ export class DocumentoSesionEstudio {
   // Reemplaza el contenido del .docx existente con el HTML actual del editor.
   async actualizar(idArchivo: number, html: string): Promise<Archivo> {
     return this.conTemporal(html, (rutaTmp) => this.archivos.actualizarContenido(idArchivo, rutaTmp));
+  }
+
+  // Lee el Word de la sesión y lo devuelve como HTML (lo mismo que hace el visor de Material).
+  async leerHtml(idArchivo: number): Promise<string> {
+    const archivo = await this.archivos.obtener({ id: idArchivo });
+    const ruta = this.almacenamiento.rutaCompleta(archivo.rutaFisica);
+    const { value } = await mammoth.convertToHtml({ path: ruta });
+    return value;
+  }
+
+  // Anota que la sesión y su Word quedaron iguales: la fecha del Word pasa a ser la de la última sincronización.
+  async marcarSincronizado(idSesion: number): Promise<void> {
+    await this.persistencia.ejecutar(
+      `UPDATE sesion_estudio s
+          SET fecha_sync_documento = a.ultima_fecha_modificacion
+         FROM archivos a
+        WHERE a.id_archivo = s.id_archivo AND s.id_sesion_estudio = $1`,
+      [idSesion]
+    );
   }
 
   // Busca la carpeta de sesiones bajo la raíz y la crea si no existe.

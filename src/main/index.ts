@@ -325,11 +325,11 @@ function wireDependencies(): ProcesoSesionEstudio {
   registerRepeticionEspaciadaIpc(repeticionEspaciada);
 
   // Gestion de sesion de estudio (el contenido se guarda en la base y en su Word de Material)
-  const documentoSesion = new DocumentoSesionEstudio(archivos, nodos, persistencia);
+  const documentoSesion = new DocumentoSesionEstudio(archivos, nodos, persistencia, almacenamiento);
   const sesionesEstudio = new SesionesEstudio({
     crear: new CrearSesionEstudio(persistencia, documentoSesion),
     listar: new ListarSesionesEstudio(persistencia),
-    obtener: new ObtenerSesionEstudio(persistencia),
+    obtener: new ObtenerSesionEstudio(persistencia, documentoSesion),
     modificar: new ModificarSesionEstudio(persistencia),
     iniciar: new IniciarSesionEstudio(persistencia),
     pausar: new PausarSesionEstudio(persistencia),

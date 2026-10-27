@@ -34,6 +34,7 @@ const tarjetasBanner: { valor: keyof TarjetasBanner; etiqueta: string }[] = [
   { valor: "clase", etiqueta: "Próxima clase" },
   { valor: "evento", etiqueta: "Próximo evento" },
   { valor: "metas", etiqueta: "Metas pendientes" },
+  { valor: "sesion", etiqueta: "Próxima sesión de estudio" },
 ];
 
 const fondosBanner: { valor: FondoBanner; etiqueta: string; icono: LucideIcon }[] = [

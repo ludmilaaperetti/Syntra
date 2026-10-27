@@ -1,27 +1,32 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Clock, Flag, type LucideIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { CalendarDays, Clock, Flag, Timer, type LucideIcon } from "lucide-react";
 import { obtenerUsuarioId } from "../../../lib/sesion";
 import type { HorarioCursado } from "../../types/horarios";
 import type { Evento } from "../../types/eventos";
 import { EVENTO_METAS_ACTUALIZADAS, type Meta } from "../../types/metas";
+import type { SesionEstudio } from "../../types/sesionesEstudio";
 import { usarPreferenciaBanner } from "../../hooks/usarPreferenciaBanner";
 import {
-  fechaLarga, saludoSegunHora, proximaClase, proximoEvento, resumenMetas,
+  fechaLarga, saludoSegunHora, proximaClase, proximoEvento, resumenMetas, proximaSesionEstudio,
   type Tarjeta, type TipoTarjeta,
 } from "../../utils/proximos";
 import "../../styles/banner.css";
 
 const INTERVALO_MS = 5000;
-const ICONOS: Record<TipoTarjeta, LucideIcon> = { clase: CalendarDays, evento: Clock, metas: Flag };
+const ICONOS: Record<TipoTarjeta, LucideIcon> = { clase: CalendarDays, evento: Clock, metas: Flag, sesion: Timer };
 
 // Banner de bienvenida del dashboard: saludo y un carrusel con lo próximo.
 export function BannerInicio() {
   const usuarioId = obtenerUsuarioId();
+  const navigate = useNavigate();
   const { tarjetas: elegidas, auto, fondo } = usarPreferenciaBanner();
   const [nombre, setNombre] = useState("");
   const [horarios, setHorarios] = useState<HorarioCursado[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [metas, setMetas] = useState<Meta[]>([]);
+  const [sesionEnCurso, setSesionEnCurso] = useState<SesionEstudio | null>(null);
+  const [proximaSesion, setProximaSesion] = useState<SesionEstudio | null>(null);
   const [imagen, setImagen] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
   const [pausado, setPausado] = useState(false);
@@ -32,6 +37,8 @@ export function BannerInicio() {
     window.api.obtenerPerfil({ id: usuarioId }).then((perfil) => setNombre(perfil.nombre)).catch(() => {});
     window.api.listarHorarios({ usuarioId }).then(setHorarios).catch(() => {});
     window.api.listarEventos({ usuarioId }).then(setEventos).catch(() => {});
+    window.api.obtenerSesionEnCurso(usuarioId).then((r) => setSesionEnCurso(r.sesion)).catch(() => {});
+    window.api.obtenerResumenSesiones({ usuarioId }).then((r) => setProximaSesion(r.proximaSesion)).catch(() => {});
 
     const cargarMetas = () => {
       window.api.listarMetas({ usuarioId }).then(setMetas).catch(() => {});
@@ -59,6 +66,7 @@ export function BannerInicio() {
     elegidas.clase ? proximaClase(horarios, ahora) : null,
     elegidas.evento ? proximoEvento(eventos, ahora) : null,
     elegidas.metas ? resumenMetas(metas) : null,
+    elegidas.sesion ? proximaSesionEstudio(sesionEnCurso, proximaSesion, ahora) : null,
   ].filter((t): t is Tarjeta => t !== null);
   const cantidad = tarjetas.length;
   const actual = cantidad > 0 ? indice % cantidad : 0;
@@ -108,6 +116,16 @@ export function BannerInicio() {
                     </p>
                     <p className="banner__titulo">{tarjeta.titulo}</p>
                     <p className="banner__detalle">{tarjeta.detalle}</p>
+                    {tarjeta.ruta && (
+                      <button
+                        type="button"
+                        className="banner__ir"
+                        tabIndex={n === actual ? 0 : -1}
+                        onClick={() => navigate(tarjeta.ruta!)}
+                      >
+                        Ir a la sesión →
+                      </button>
+                    )}
                   </article>
                 );
               })}

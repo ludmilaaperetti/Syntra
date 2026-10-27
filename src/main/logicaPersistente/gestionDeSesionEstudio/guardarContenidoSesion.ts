@@ -64,9 +64,10 @@ export class GuardarContenidoSesion {
         `UPDATE sesion_estudio SET id_archivo = $1 WHERE id_sesion_estudio = $2`,
         [archivo.id, idSesion]
       );
-      return;
+    } else {
+      await this.documento.actualizar(idArchivo, html);
     }
-    await this.documento.actualizar(idArchivo, html);
+    await this.documento.marcarSincronizado(idSesion);
   }
 
   // Con una sola pestaña el Word queda igual que antes; con varias, cada una va bajo su título.

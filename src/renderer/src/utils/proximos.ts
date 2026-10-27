@@ -1,8 +1,9 @@
 import type { HorarioCursado } from '../types/horarios';
 import type { Evento } from '../types/eventos';
 import type { Meta } from '../types/metas';
+import type { SesionEstudio } from '../types/sesionesEstudio';
 
-export type TipoTarjeta = 'clase' | 'evento' | 'metas';
+export type TipoTarjeta = 'clase' | 'evento' | 'metas' | 'sesion';
 
 // Una tarjeta del carrusel del banner de inicio.
 export interface Tarjeta {
@@ -10,6 +11,8 @@ export interface Tarjeta {
   etiqueta: string;
   titulo: string;
   detalle: string;
+  // Si tiene ruta, la tarjeta muestra un botón para ir ahí.
+  ruta?: string;
 }
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -104,5 +107,28 @@ export function resumenMetas(metas: Meta[]): Tarjeta | null {
     etiqueta: 'Metas pendientes',
     titulo: `${pendientes.length} de ${metas.length} sin tachar`,
     detalle: `Sigue: ${pendientes[0].titulo}`,
+  };
+}
+
+// La sesión de estudio en curso o, si no hay, la próxima que está por empezar.
+export function proximaSesionEstudio(enCurso: SesionEstudio | null, proxima: SesionEstudio | null, ahora: Date): Tarjeta | null {
+  if (enCurso) {
+    return {
+      tipo: 'sesion',
+      etiqueta: enCurso.pausada ? 'Sesión pausada' : 'Sesión en curso',
+      titulo: enCurso.nombre,
+      detalle: `${enCurso.materiaAsociada.nombre} · ${enCurso.duracion} min`,
+      ruta: `/sesiones/${enCurso.idSesion}`,
+    };
+  }
+  if (!proxima) return null;
+  const fecha = new Date(proxima.fechaProgramada);
+  const hora = `${String(fecha.getHours()).padStart(2, '0')}:${String(fecha.getMinutes()).padStart(2, '0')}`;
+  return {
+    tipo: 'sesion',
+    etiqueta: 'Próxima sesión de estudio',
+    titulo: proxima.nombre,
+    detalle: `${textoDia(fecha, ahora)}, ${hora} · ${proxima.duracion} min de ${proxima.materiaAsociada.nombre}`,
+    ruta: `/sesiones/${proxima.idSesion}`,
   };
 }

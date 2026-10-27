@@ -196,3 +196,21 @@
     width: 100%;
   }
 }
+
+/* Botón "Ir a la sesión" de la tarjeta de sesión de estudio */
+.banner__ir {
+  align-self: flex-start;
+  margin-top: var(--espacio-xs);
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radio-sm);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--tamano-sm);
+  cursor: pointer;
+}
+
+.banner__ir:hover {
+  background: var(--color-frost-claro);
+}

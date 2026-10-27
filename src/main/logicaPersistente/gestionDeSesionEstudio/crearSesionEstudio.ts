@@ -21,8 +21,8 @@ export class CrearSesionEstudio {
       `WITH nueva AS (
          INSERT INTO sesion_estudio
            (id_usuario, id_materia, nombre, duracion, fecha_programada,
-            pomodoro_min, descanso_corto_min, descanso_largo_min, recibir_notificacion)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            pomodoro_min, descanso_corto_min, descanso_largo_min, recibir_notificacion, id_deck)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $12)
          RETURNING id_sesion_estudio
        ), metodos AS (
          INSERT INTO sesion_estudio_metodo_estudio (id_sesion_estudio, id_tipo_metodo_estudio)
@@ -48,6 +48,7 @@ export class CrearSesionEstudio {
         datos.recibirNotificacion,
         idsMetodos,
         datos.objetivos,
+        datos.idDeck,
       ]
     );
 
@@ -60,6 +61,7 @@ export class CrearSesionEstudio {
         `UPDATE sesion_estudio SET id_archivo = $1 WHERE id_sesion_estudio = $2`,
         [archivo.id, idSesion]
       );
+      await this.documento.marcarSincronizado(idSesion);
     } catch (error) {
       console.error('[CrearSesionEstudio] No se pudo crear el documento Word:', error);
     }

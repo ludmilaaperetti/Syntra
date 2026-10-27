@@ -7,6 +7,7 @@ export interface TarjetasBanner {
   clase: boolean;
   evento: boolean;
   metas: boolean;
+  sesion: boolean;
 }
 
 const CLAVE_TARJETAS = "syntra:banner-tarjetas";
@@ -34,9 +35,14 @@ function guardar(clave: string, valor: string): void {
 export function leerTarjetas(): TarjetasBanner {
   try {
     const valor = JSON.parse(leer(CLAVE_TARJETAS) ?? "{}");
-    return { clase: valor.clase !== false, evento: valor.evento !== false, metas: valor.metas !== false };
+    return {
+      clase: valor.clase !== false,
+      evento: valor.evento !== false,
+      metas: valor.metas !== false,
+      sesion: valor.sesion !== false,
+    };
   } catch {
-    return { clase: true, evento: true, metas: true };
+    return { clase: true, evento: true, metas: true, sesion: true };
   }
 }
 

@@ -62,6 +62,7 @@ export interface SesionEstudio {
   objetivos: ObjetivoSesion[];
   contenido: string;
   idArchivo: number | null;
+  idDeck: number | null;
 }
 
 export interface OpcionesSesionEstudio {
@@ -103,6 +104,7 @@ export interface CrearSesionEstudioEntrada {
   fechaProgramada: string;
   recibirNotificacion: boolean;
   objetivos: string[];
+  idDeck?: number | null;
 }
 
 export interface ModificarSesionEstudioEntrada {
