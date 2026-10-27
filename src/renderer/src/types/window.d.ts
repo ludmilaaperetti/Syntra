@@ -7,10 +7,12 @@ import type { Perfil } from './perfil';
 import type { Meta, CrearMetaInput, CompletarMetaInput, EliminarMetaInput } from './metas';
 import type { Deck, Flashcard, FlashcardPendiente, RepeticionMaterial } from './flashcards';
 import type { Notificacion } from './notificaciones';
+import type { SesionesEstudioApi } from './sesionesEstudio';
+import type { SpotifyApi } from './spotify';
 
 declare global {
   interface Window {
-    api: {
+    api: SesionesEstudioApi & SpotifyApi & {
       // Gestion de material de estudio
       crearNodo: (datos: { nombre: string; idPadre: number | null }) => Promise<Nodo>;
       modificarNodo: (datos: { id: number; nombre: string }) => Promise<Nodo>;

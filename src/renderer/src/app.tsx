@@ -20,6 +20,11 @@ import { MetodosPage } from "./pages/metodos/metodosPage";
 import { RepeticionEspaciadaPage } from "./pages/metodos/repeticionEspaciadaPage";
 import { DeckFlashcardsPage, EstudiarFlashcardsPage, FlashcardsPage } from "./pages/flashcards/flashcardsPage";
 import { CronogramaPage } from "./pages/cronograma/cronogramaPage";
+import { SesionesEstudioPage } from "./pages/sesionesEstudio/sesionesEstudioPage";
+import { CrearSesionEstudioPage } from "./pages/sesionesEstudio/crearSesionEstudioPage";
+import { SesionEstudioPage } from "./pages/sesionesEstudio/sesionEstudioPage";
+import { ProveedorAvisos } from "./hooks/usarAvisos";
+import { ProveedorSpotify } from "./hooks/usarSpotify";
 
 export default function App() {
   const [mostrarSplash, setMostrarSplash] = useState(true);
@@ -33,29 +38,34 @@ export default function App() {
   }
 
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/registro" element={<RegistrarUsuarioPage />} />
-        <Route path="/verificar-mail" element={<VerificarMailPage />} />
-        <Route path="/recuperar-contraseña" element={<RecuperarPasswordPage />} />
-        <Route path="/verificar-codigo" element={<VerificarCodigoPage />} />
-        <Route path="/cambioPassword" element={<CambiarPasswordPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/material" element={<NodoPage />} />
-        <Route path="/eventos" element={<EventosPage />} />
-        <Route path="/horarios" element={<HorariosPage />} />
-        <Route path="/cronograma" element={<CronogramaPage />} />
-        <Route path="/perfil" element={<PerfilPage />} />
-        <Route path="/ajustes" element={<AjustesPage />} />
-        <Route path="/metodos" element={<MetodosPage />} />
-        <Route path="/flashcards" element={<FlashcardsPage />} />
-        <Route path="/flashcards/:deckId" element={<DeckFlashcardsPage />} />
-        <Route path="/flashcards/:deckId/estudiar" element={<EstudiarFlashcardsPage />} />
-        <Route path="/repeticion-espaciada" element={<RepeticionEspaciadaPage />} />
-        <Route path="/proximamente/:id" element={<Proximamente />} />
-      </Routes>
-      <PanelPerfil />
-    </>
+    <ProveedorAvisos>
+      <ProveedorSpotify>
+        <Routes>
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/registro" element={<RegistrarUsuarioPage />} />
+          <Route path="/verificar-mail" element={<VerificarMailPage />} />
+          <Route path="/recuperar-contraseña" element={<RecuperarPasswordPage />} />
+          <Route path="/verificar-codigo" element={<VerificarCodigoPage />} />
+          <Route path="/cambioPassword" element={<CambiarPasswordPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/material" element={<NodoPage />} />
+          <Route path="/eventos" element={<EventosPage />} />
+          <Route path="/horarios" element={<HorariosPage />} />
+          <Route path="/cronograma" element={<CronogramaPage />} />
+          <Route path="/sesiones" element={<SesionesEstudioPage />} />
+          <Route path="/sesiones/nueva" element={<CrearSesionEstudioPage />} />
+          <Route path="/sesiones/:idSesion" element={<SesionEstudioPage />} />
+          <Route path="/perfil" element={<PerfilPage />} />
+          <Route path="/ajustes" element={<AjustesPage />} />
+          <Route path="/metodos" element={<MetodosPage />} />
+          <Route path="/flashcards" element={<FlashcardsPage />} />
+          <Route path="/flashcards/:deckId" element={<DeckFlashcardsPage />} />
+          <Route path="/flashcards/:deckId/estudiar" element={<EstudiarFlashcardsPage />} />
+          <Route path="/repeticion-espaciada" element={<RepeticionEspaciadaPage />} />
+          <Route path="/proximamente/:id" element={<Proximamente />} />
+        </Routes>
+        <PanelPerfil />
+      </ProveedorSpotify>
+    </ProveedorAvisos>
   );
 }

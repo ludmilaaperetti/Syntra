@@ -49,6 +49,12 @@ export function crearPaleta(base: BasePaleta, modo: Modo): Colores {
     splashFondo: base.lateral,
     splashCentro: base.primario,
     splashBrillo: base.primarioClaro,
+    // Sesiones de estudio
+    crema: base.fondo,
+    cremaOscuro: base.borde,
+    frostSuave: base.suave,
+    noche: base.lateral,
+    nocheClaro: base.activo,
     ...ESTADOS[modo],
   };
 }

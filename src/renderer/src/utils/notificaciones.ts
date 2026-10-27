@@ -19,7 +19,7 @@ export function tiempoRelativo(fecha: Date, ahora: Date): string {
 const RUTAS: Record<TipoNotificacion, string> = {
   evento: '/eventos',
   meta: '/dashboard',
-  sesion: '/proximamente/sesiones',
+  sesion: '/sesiones',
   proyecto: '/proximamente/proyectos',
 };
 
