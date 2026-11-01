@@ -14,6 +14,7 @@ import { Proximamente } from "./pages/proximamente/proximamente";
 import { EventosPage } from "./pages/eventos/eventosPage";
 import { HorariosPage } from "./pages/horarios/horariosPage";
 import { PerfilPage } from "./pages/perfil/perfilPage";
+import { Anunciador } from "./voz/anunciador";
 import { PanelPerfil } from "./pages/perfil/panelPerfil";
 import { AjustesPage } from "./pages/ajustes/ajustesPage";
 import { MetodosPage } from "./pages/metodos/metodosPage";
@@ -29,6 +30,8 @@ import { CrearSesionEstudioPage } from "./pages/sesionesEstudio/crearSesionEstud
 import { SesionEstudioPage } from "./pages/sesionesEstudio/sesionEstudioPage";
 import { ProveedorAvisos } from "./hooks/usarAvisos";
 import { ProveedorSpotify } from "./hooks/usarSpotify";
+import { EcoTeclado } from "./voz/ecoTeclado";
+
 
 export default function App() {
   const [mostrarSplash, setMostrarSplash] = useState(true);
@@ -74,6 +77,8 @@ export default function App() {
         <Route path="/proximamente/:id" element={<Proximamente />} />
       </Routes>
       <PanelPerfil />
+      <Anunciador />
+      <EcoTeclado activo />
     </ProveedorSpotify>
     </ProveedorAvisos>
   );

@@ -8,6 +8,8 @@ import { VisorExcel } from './visorExcel';
 import { VisorTexto } from './visorTexto';
 import { MenuAbrirCon } from './menuAbrirCon';
 import '../../styles/visor.css';
+import { extraerBloques } from '../../voz/extraerTexto';
+import { detenerLectura, empezarLectura, pausarLectura, seguirLectura } from '../../voz/lectorDocumento';
 
 interface VisorArchivoProps {
   archivo: Archivo;
@@ -22,6 +24,7 @@ const mensaje = (e: unknown, porDefecto: string) => (e instanceof Error ? e.mess
 export function VisorArchivo({ archivo, onCerrar, onGuardado, soloLectura = false }: VisorArchivoProps) {
   const [contenido, setContenido] = useState<Uint8Array | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [lectura, setLectura] = useState<'quieta' |'leyendo' | 'pausada'>('quieta');
   const [aviso, setAviso] = useState<string | null>(null);
   const tipo = tipoVisor(archivo.extension);
 
@@ -54,12 +57,30 @@ export function VisorArchivo({ archivo, onCerrar, onGuardado, soloLectura = fals
     }
   };
 
+  useEffect(() => () => detenerLectura(), []); // al cerrar el visor, se calla
+
+  const alternarLectura = async () => {
+    if (lectura === 'leyendo') {
+      pausarLectura();
+      setLectura('pausada');
+    } else if (lectura === 'pausada') {
+      seguirLectura();
+      setLectura('leyendo');
+    } else if (contenido) {
+      setLectura('leyendo');
+      empezarLectura(await extraerBloques(contenido, archivo.extension ?? ''));
+    }
+  };
+
   return (
     <div className="visor-overlay">
       <div className="visor">
         <header className="visor__encabezado">
           <h3 className="visor__titulo">{archivo.nombre}.{archivo.extension}</h3>
           <div className="visor__acciones">
+                   <button className="visor-boton visor-boton--contorno" onClick={alternarLectura} disabled={!contenido}>
+              {lectura === 'leyendo' ? 'Pausar lectura' : lectura === 'pausada' ? 'Seguir leyendo' : 'Leer en voz alta'}
+            </button>     
             <MenuAbrirCon archivo={archivo} onError={setError} />
             <button className="visor-boton visor-boton--contorno" onClick={onCerrar}>Cerrar</button>
           </div>
