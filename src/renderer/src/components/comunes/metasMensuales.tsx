@@ -8,6 +8,7 @@ import type { RolMiembro } from '../../types/proyectos';
 import { puede } from '../../permisos';
 import { obtenerUsuarioId } from '../../../lib/sesion';
 import { useCambiosRemotos } from '../../hooks/useCambiosRemotos';
+import { usarAvisos } from '../../hooks/usarAvisos';
 import { conBloqueoDe } from '../../utils/conBloqueo';
 import { ConflictosProyecto } from '../proyectos/conflictosProyecto';
 
@@ -28,6 +29,7 @@ interface MetasMensualesProps {
 }
 
 export function MetasMensuales({ idProyecto, rol }: MetasMensualesProps) {
+  const { confirmar } = usarAvisos();
   const puedeCrear = puede(rol, 'meta.crear');
   const puedeEditarMeta = puede(rol, 'meta.editar');
   const puedeAlternar = puede(rol, 'meta.alternar');
@@ -139,7 +141,10 @@ export function MetasMensuales({ idProyecto, rol }: MetasMensualesProps) {
   }
 
   async function eliminar(meta: Meta): Promise<void> {
-    if (!window.confirm(`¿Eliminar la meta "${meta.titulo}"?`)) return;
+    if (!await confirmar(
+      `¿Eliminar la meta "${meta.titulo}"?`,
+      { titulo: 'Confirmar eliminación', textoConfirmar: 'Eliminar', peligro: true },
+    )) return;
     await ejecutar(
       () => window.api.eliminarMeta({ idMeta: meta.idMeta, idUsuario: ID_USUARIO_ACTUAL }),
       'No se pudo eliminar la meta.',

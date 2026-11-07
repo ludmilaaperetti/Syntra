@@ -9,6 +9,7 @@ import { LARGO_PREGUNTA, LARGO_RESPUESTA, pegarConFormulas, tieneFormulas } from
 import { TarjetaFlashcard } from '../../components/flashcards/tarjetaFlashcard';
 import type { Deck, Flashcard } from '../../types/flashcards';
 import { ESTILOS_TARJETA, usarEstiloFlashcards, type EstiloTarjeta } from '../../hooks/usarEstiloFlashcards';
+import { usarAvisos } from '../../hooks/usarAvisos';
 import styles from '../../styles/flashcards.module.css';
 
 function usuarioIdActual(): number {
@@ -27,6 +28,7 @@ function ultimaRevision(fecha?: string | Date | null): string {
 }
 
 export function FlashcardsPage() {
+  const { confirmar } = usarAvisos();
   const [mazos, setMazos] = useState<Deck[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [nombre, setNombre] = useState('');
@@ -143,8 +145,9 @@ export function FlashcardsPage() {
   async function eliminarMazosSeleccionados() {
     if (!mazosSeleccionados.length) return;
     const cantidad = mazosSeleccionados.length;
-    const confirmacion = window.confirm(
+    const confirmacion = await confirmar(
       `¿Eliminar ${cantidad} ${cantidad === 1 ? 'mazo' : 'mazos'} seleccionado${cantidad === 1 ? '' : 's'}? También se eliminarán sus flashcards e historial de revisiones.`,
+      { titulo: 'Confirmar eliminación', textoConfirmar: 'Eliminar', peligro: true },
     );
     if (!confirmacion) return;
 
@@ -271,6 +274,7 @@ export function FlashcardsPage() {
 }
 
 export function DeckFlashcardsPage() {
+  const { confirmar } = usarAvisos();
   const { deckId: deckIdParam } = useParams();
   const deckId = Number(deckIdParam);
   const navigate = useNavigate();
@@ -397,7 +401,10 @@ export function DeckFlashcardsPage() {
   async function eliminarFlashcardsSeleccionadas() {
     if (!flashcardsSeleccionadas.length) return;
     const cantidad = flashcardsSeleccionadas.length;
-    if (!window.confirm(`¿Eliminar ${cantidad} ${cantidad === 1 ? 'flashcard' : 'flashcards'} seleccionada${cantidad === 1 ? '' : 's'}?`)) return;
+    if (!await confirmar(
+      `¿Eliminar ${cantidad} ${cantidad === 1 ? 'flashcard' : 'flashcards'} seleccionada${cantidad === 1 ? '' : 's'}?`,
+      { titulo: 'Confirmar eliminación', textoConfirmar: 'Eliminar', peligro: true },
+    )) return;
 
     try {
       setGuardando(true);

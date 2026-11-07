@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Nodo } from '../../types/nodo';
 import { CartelError } from '../../components/comunes/cartelError';
+import { usarAvisos } from '../../hooks/usarAvisos';
 import type { RolMiembro } from '../../types/proyectos';
 import { puede } from '../../permisos';
 import '../../styles/archivos.css';
@@ -16,6 +17,7 @@ type Elegido = { nombre: string; extension: string; rutaFisica: string; tamanio:
 const mensaje = (e: unknown, porDefecto: string) => (e instanceof Error ? e.message : porDefecto);
 
 export function ArchivosPage({ idPadre, onVolver, rol = 'propietario' }: Props) {
+  const { confirmar } = usarAvisos();
   const [seleccionado, setSeleccionado] = useState<Elegido | null>(null);
   const [archivos, setArchivos] = useState<Nodo[]>([]);
   const [carpetas, setCarpetas] = useState<Nodo[]>([]);
@@ -70,7 +72,10 @@ export function ArchivosPage({ idPadre, onVolver, rol = 'propietario' }: Props) 
   }
 
   async function eliminar(id: number) {
-    if (!confirm('¿Eliminar este archivo? No se puede deshacer.')) return;
+    if (!await confirmar(
+      '¿Eliminar este archivo? No se puede deshacer.',
+      { titulo: 'Confirmar eliminación', textoConfirmar: 'Eliminar', peligro: true },
+    )) return;
     try {
       await window.api.eliminarArchivo({ id });
       await cargar();

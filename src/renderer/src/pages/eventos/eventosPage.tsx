@@ -8,6 +8,7 @@ import { obtenerUsuarioId } from '../../../lib/sesion';
 import { puede, rolDe } from '../../permisos';
 import { useCambiosRemotos } from '../../hooks/useCambiosRemotos';
 import { useEdicionDeElemento } from '../../hooks/useEdicionCompartida';
+import { usarAvisos } from '../../hooks/usarAvisos';
 import { BannerEdicion } from '../../components/proyectos/bannerEdicion';
 import { ConflictosProyecto } from '../../components/proyectos/conflictosProyecto';
 import '../../styles/eventos.css';
@@ -56,6 +57,7 @@ function mensajeDeError(err: unknown, porDefecto: string): string {
 }
 
 function EventosContenido({ usuarioId }: { usuarioId: number }): JSX.Element {
+  const avisos = usarAvisos();
   const hoy = new Date();
   const navigate = useNavigate();
   const location = useLocation();
@@ -438,7 +440,7 @@ function EventosContenido({ usuarioId }: { usuarioId: number }): JSX.Element {
       await cargarEventos();
     } catch (err) {
       console.error('Error al eliminar evento:', err);
-      window.alert('No se pudo eliminar el evento.');
+      avisos.error('No se pudo eliminar el evento.');
     }
   }
 
