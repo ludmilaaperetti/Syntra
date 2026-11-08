@@ -1,17 +1,19 @@
 // src/main/logicaNoPersistente/ia/index.ts  — "raíz de composición": acá se arma todo
 import { app, net, safeStorage } from 'electron';
 import { join } from 'node:path';
-import { AlmacenClaves } from './proveedores/almacenClaves';
-import { ProveedorGemini } from './proveedores/proveedorGemini';
-import { ProveedorLuna } from './proveedores/proveedorLuna';
-import { ProveedorOllama } from './proveedores/proveedorOllama';
-import { ColaEjecucion, type EventoProgreso } from './colaEjecucion';
-import { RouterModelos } from './routerModelos';
-import { TAREAS, type Tarea } from './tipos';
+import { AlmacenClaves } from '../../servicios/ia/almacenClaves.js';
+import { ProveedorGemini } from '../../servicios/ia/proveedorGemini.js';
+import { ProveedorLuna } from '../../servicios/ia/proveedorLuna.js';
+import { ProveedorOllama } from '../../servicios/ia/proveedorOllama.js';
+import { ColaEjecucion, type EventoProgreso } from './colaEjecucion.js';
+import { RouterModelos } from './routerModelos.js';
+import { TAREAS, type Tarea } from './tipos.js';
 
 export interface OpcionesServiciosIA {
   /** Se llama en cada cambio de estado/progreso de un trabajo (el main lo manda a la ventana). */
   alProgreso?: (e: EventoProgreso) => void;
+  /** Estado de Ollama (iniciando, listo, falta_modelo, descargando...) para mostrarlo en la pantalla. */
+  alOllama?: (e: EventoOllama) => void;
 }
 
 export function crearServiciosIA(opciones: OpcionesServiciosIA = {}) {
@@ -27,9 +29,17 @@ export function crearServiciosIA(opciones: OpcionesServiciosIA = {}) {
     }
   };
 
-  const ollama = new ProveedorOllama('gemma', {
-    host: process.env.OLLAMA_HOST,
-    modelo: process.env.OLLAMA_MODELO ?? 'COMPLETAR-con-ollama-list',
+  // OLLAMA_HOST suele escribirse sin "http://": se normaliza para no romper el fetch
+  const hostOllama = normalizarHost(process.env.OLLAMA_HOST);
+  const modeloOllama = process.env.OLLAMA_MODELO ?? 'COMPLETAR-con-ollama-list';
+  const ollama = new ProveedorOllama('gemma', { host: hostOllama, modelo: modeloOllama });
+  // Inicia Ollama y descarga el modelo si falta. OLLAMA_AUTO_DESCARGA=1 → sin preguntar (solo desarrollo)
+  const gestorOllama = new GestorOllama({
+    host: hostOllama,
+    modelo: modeloOllama,
+    estado: () => ollama.estado(),
+    alEvento: opciones.alOllama,
+    autoDescargar: process.env.OLLAMA_AUTO_DESCARGA === '1',
   });
 
   const proveedores = [
@@ -57,7 +67,7 @@ export function crearServiciosIA(opciones: OpcionesServiciosIA = {}) {
   });
 
   const cola = new ColaEjecucion(2, opciones.alProgreso);
-  return { claves, router, cola, ollama };
+  return { claves, router, cola, ollama, gestorOllama };
 }
 
 export type ServiciosIA = ReturnType<typeof crearServiciosIA>;

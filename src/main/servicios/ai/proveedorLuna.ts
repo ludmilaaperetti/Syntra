@@ -1,7 +1,7 @@
 // src/main/logicaNoPersistente/ia/proveedores/proveedorLuna.ts  (Azure OpenAI / Foundry, GPT-6 Luna)
 import OpenAI from 'openai';
-import { ErrorProveedor, clasificar } from '../errores';
-import type { PedidoCrudo, ProveedorModelo } from '../tipos';
+import { ErrorProveedor, clasificar } from '../../logicaNoPersistente/ia/errores';
+import type { PedidoCrudo, ProveedorModelo } from '../../logicaNoPersistente/ia/tipos';
 
 export interface ConfigLuna {
   recurso: string; // "mi-recurso" → https://mi-recurso.openai.azure.com

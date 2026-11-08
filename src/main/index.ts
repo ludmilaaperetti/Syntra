@@ -276,6 +276,9 @@ import { registerMaterialIAIpc } from './ipc/materialIA.ipc';
 let mainWindow: BrowserWindow | null = null;
 let procesoSesion: ProcesoSesionEstudio | null = null;
 
+// Servicios de IA (se crean dentro de whenReady, cuando Electron ya está listo).
+let iaServicios: ServiciosIA | null = null;
+
 // Se guardan mientras están en pantalla: si no, Windows puede perder el clic.
 const avisosVisibles = new Set<Notification>();
 
@@ -759,6 +762,15 @@ app.whenReady().then(async () => {
 
   // Los handlers IPC se registran antes de crear la ventana.
   procesoSesion = wireDependencies();
+
+  // IA: se crea acá (no al importar el archivo) porque necesita app/safeStorage ya listos.
+  const servicios = crearServiciosIA({
+    alProgreso: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:progreso', e)),
+    alOllama: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:ollama', e)),
+  });
+  iaServicios = servicios;
+  registrarIpcIA(iaServicios);
+
   const recordatorios = new EnviarRecordatoriosPendientes(new Persistencia(pool));
   let recordatoriosEnCurso = false;
   const enviarRecordatorios = async (): Promise<void> => {
@@ -775,6 +787,8 @@ app.whenReady().then(async () => {
   void enviarRecordatorios();
   setInterval(() => void enviarRecordatorios(), 15 * 60 * 1000);
   createWindow();
+  // Inicia Ollama (si está instalado) y revisa el modelo. Sin await: no frena el arranque.
+  void servicios.gestorOllama.preparar();
   await procesoSesion.arrancar();
 
   app.on('activate', () => {
@@ -804,6 +818,12 @@ app.on('before-quit', (event) => {
   cancelarIA?.();
 
   void (async () => {
+    // Apaga el Ollama que inició la app (si ya estaba corriendo antes, no lo toca).
+    try {
+      iaServicios?.gestorOllama.detener();
+    } catch (err) {
+      console.error('[shutdown] No se pudo detener Ollama:', err);
+    }
     // Primero se frena el barrido de la sincronización: si no, sigue consultando la base ya cerrada.
     try {
       await detenerSincronizacion?.();

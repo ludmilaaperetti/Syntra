@@ -1,6 +1,6 @@
 // src/main/logicaNoPersistente/ia/proveedores/proveedorOllama.ts  (Gemma local)
-import { ErrorProveedor, clasificar } from '../errores';
-import type { PedidoCrudo, ProveedorModelo } from '../tipos';
+import { ErrorProveedor, clasificar } from '../../logicaNoPersistente/ia/errores';
+import type { PedidoCrudo, ProveedorModelo } from '../../logicaNoPersistente/ia/tipos';
 
 export interface ConfigOllama {
   host?: string; // por defecto http://127.0.0.1:11434
@@ -21,12 +21,18 @@ export class ProveedorOllama implements ProveedorModelo {
     this.timeoutMs = cfg.timeoutMs ?? 120_000;
   }
 
+  /** `gemma4` y `gemma4:latest` son el mismo modelo: Ollama lista siempre el nombre con tag. */
+  private coincide(nombreInstalado: string): boolean {
+    const pedido = this.cfg.modelo;
+    return nombreInstalado === pedido || nombreInstalado === `${pedido}:latest`;
+  }
+
   async disponible(): Promise<boolean> {
     try {
       const r = await fetch(`${this.host}/api/tags`, { signal: AbortSignal.timeout(1500) });
       if (!r.ok) return false;
       const j = (await r.json()) as { models?: { name: string }[] };
-      return (j.models ?? []).some((m) => m.name === this.cfg.modelo);
+      return (j.models ?? []).some((m) => this.coincide(m.name));
     } catch {
       return false; // Ollama apagado
     }
@@ -38,7 +44,7 @@ export class ProveedorOllama implements ProveedorModelo {
       const r = await fetch(`${this.host}/api/tags`, { signal: AbortSignal.timeout(1500) });
       if (!r.ok) return { corriendo: false, modeloInstalado: false };
       const j = (await r.json()) as { models?: { name: string }[] };
-      return { corriendo: true, modeloInstalado: (j.models ?? []).some((m) => m.name === this.cfg.modelo) };
+      return { corriendo: true, modeloInstalado: (j.models ?? []).some((m) => this.coincide(m.name)) };
     } catch {
       return { corriendo: false, modeloInstalado: false };
     }
