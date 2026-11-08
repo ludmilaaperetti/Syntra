@@ -175,7 +175,18 @@ declare global {
       sincronizarProyecto: (datos: SincronizarProyectoDatos) => Promise<void>;
       unirseAProyecto: (datos: UnirseAProyectoDatos) => Promise<Proyecto>;
       agregarMiembroPorMail: (datos: {
-        idProyecto: number; idUsuarioSolicitante: number; mail: string; rol: 'editor' | 'lector';
+        idProyecto: number;
+        idUsuarioSolicitante: number;
+        mail: string;
+        rol: 'editor' | 'lector';
+        coloresCorreo?: {
+          primario: string;
+          fondo: string;
+          superficie: string;
+          borde: string;
+          texto: string;
+          suave: string;
+        };
       }) => Promise<{ pendiente: true; mail: string }>;
       cambiarRolMiembro: (datos: CambiarRolMiembroDatos) => Promise<Miembro>;
       obtenerReglas: () => Promise<Record<string, readonly RolMiembro[]>>;

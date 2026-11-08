@@ -15,6 +15,7 @@ import { useTareas } from '../../hooks/useTareas';
 import { useEdicionCompartida, useBloqueos } from '../../hooks/useEdicionCompartida';
 import type { ClaveEdicion, Resultado } from '../../hooks/useEdicionCompartida';
 import { useCambiosRemotos } from '../../hooks/useCambiosRemotos';
+import { usarAvisos } from '../../hooks/usarAvisos';
 import { conBloqueo } from '../../utils/conBloqueo';
 import {
   agruparPorColumna,
@@ -81,6 +82,7 @@ function TareasContenido({
   ID_USUARIO_ACTUAL: number;
   ID_GLOBAL_ACTUAL: string | null;
 }) {
+  const { confirmar } = usarAvisos();
   const { id } = useParams();
   const idProyecto = Number(id);
   const navigate = useNavigate();
@@ -202,9 +204,12 @@ function TareasContenido({
       });
     },
     onEditar: (t) => setEdicion(t),
-    onEliminar: (t) => {
+    onEliminar: async (t) => {
       if (!permitido('tarea.eliminar')) return;
-      if (!window.confirm(`¿Eliminar la tarea "${t.titulo}"?`)) return;
+      if (!await confirmar(
+        `¿Eliminar la tarea "${t.titulo}"?`,
+        { titulo: 'Confirmar eliminación', textoConfirmar: 'Eliminar', peligro: true },
+      )) return;
       void conLock(t, () => eliminar(t.idTarea));
     },
     onAsignar: (t, idAsignadoGlobal) => {

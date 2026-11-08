@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { MouseEvent, KeyboardEvent } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { PDFDocument, StandardFonts, rgb, degrees } from 'pdf-lib';
+import { usarAvisos } from '../../hooks/usarAvisos';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 
@@ -20,7 +21,13 @@ const TAMANIO_TEXTO = 12; // en puntos del PDF
 type Borrador = { x: number; y: number; texto: string };
 
 // Muestra el PDF con react-pdf y lo edita con pdf-lib: rotar, eliminar páginas y escribir texto sobre la página.
+
 export function VisorPdf({ contenido, onGuardar, soloLectura = false, ancho = ANCHO_PAGINA }: VisorPdfProps) {
+<<<<<<< HEAD
+
+=======
+  const { confirmar } = usarAvisos();
+>>>>>>> 7515a78ec1217662848dfbed2a9af7a1b280395f
   const [bytes, setBytes] = useState(contenido);
   const [paginas, setPaginas] = useState(0);
   const [actual, setActual] = useState(1);
@@ -50,9 +57,12 @@ export function VisorPdf({ contenido, onGuardar, soloLectura = false, ancho = AN
       pagina.setRotation(degrees((pagina.getRotation().angle + 90) % 360));
     });
 
-  const eliminarPagina = () => {
+  const eliminarPagina = async () => {
     if (paginas <= 1) return;
-    if (!confirm(`¿Eliminar la página ${actual}?`)) return;
+    if (!await confirmar(
+      `¿Eliminar la página ${actual}?`,
+      { titulo: 'Confirmar eliminación', textoConfirmar: 'Eliminar', peligro: true },
+    )) return;
     editar((pdf) => pdf.removePage(actual - 1));
     setActual((a) => Math.max(1, a - 1));
   };

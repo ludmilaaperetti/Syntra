@@ -49,7 +49,7 @@ export class AgregarMiembroPorMail {
 
         // Si el mail no sale se deshace el alta, salvo que ya estuviera pendiente de antes.
         try {
-            await enviarInvitacionProyecto(mailInvitado, proyecto, invitador, enlace);
+            await enviarInvitacionProyecto(mailInvitado, proyecto, invitador, enlace, dto.coloresCorreo);
         } catch {
             if (!yaEstabaPendiente) {
                 await this.sincronizador.gestionarMiembroPorMail(idRemoto, mailInvitado, 'baja').catch(() => undefined);
