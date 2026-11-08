@@ -15,10 +15,12 @@
     "test": "vitest run",
     "test:jest": "jest",
     "test:watch": "vitest",
+    "test:ia": "vitest run src/main/tests/ia",
     "db:demo": "docker cp db/demo/borrar_demo.sql app_postgres:/tmp/borrar_demo.sql && docker cp db/demo/datos_demo.sql app_postgres:/tmp/datos_demo.sql && docker exec app_postgres sh -c \"psql -q -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -f /tmp/borrar_demo.sql -f /tmp/datos_demo.sql\"",
     "db:demo:borrar": "docker cp db/demo/borrar_demo.sql app_postgres:/tmp/borrar_demo.sql && docker exec app_postgres sh -c \"psql -q -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -f /tmp/borrar_demo.sql\""
   },
   "dependencies": {
+    "@google/genai": "^3.0.0",
     "@supabase/supabase-js": "^2.118.0",
     "@tiptap/pm": "^3.31.4",
     "@tiptap/react": "^3.31.4",
@@ -31,6 +33,7 @@
     "lucide-react": "^1.51.0",
     "mammoth": "^1.13.0",
     "nodemailer": "^10.0.10",
+    "openai": "^7.53.0",
     "pdf-lib": "^1.17.1",
     "pg": "^8.11.3",
     "react": "^18.3.1",
@@ -40,7 +43,7 @@
     "react-spreadsheet": "^0.10.1",
     "tsx": "^4.23.15",
     "ws": "^8.22.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@electron-toolkit/utils": "^3.0.0",
