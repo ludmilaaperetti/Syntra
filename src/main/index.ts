@@ -264,6 +264,14 @@ import { AutenticacionSpotify } from './logicaNoPersistente/spotify/autenticacio
 import { ClienteSpotify } from './logicaNoPersistente/spotify/clienteSpotify';
 import { registerSpotifyIpc } from './ipc/spotify.ipc';
 
+// Material con IA 
+import { GeneradorMaterialIA } from './logicaNoPersistente/ia/generadorMaterialIA';
+import { routerSinConectar, colaSinConectar } from './logicaNoPersistente/ia/sinConectar';
+import { GuardarMaterialIA } from './logicaPersistente/gestionDeMaterialIA/guardarMaterialIA';
+import { ListarMaterialesIA } from './logicaPersistente/gestionDeMaterialIA/listarMaterialesIA';
+import { MaterialIA } from './administracionDePersistencia/materialIA';
+import { registerMaterialIAIpc } from './ipc/materialIA.ipc';
+
 let mainWindow: BrowserWindow | null = null;
 let procesoSesion: ProcesoSesionEstudio | null = null;
 
@@ -293,6 +301,8 @@ function mostrarEnSistema(notificacion: Notificacion): void {
 let edicion: Edicion | null = null;
 // Se guarda para frenar el barrido de la sincronización antes de cerrar la base al salir.
 let detenerSincronizacion: (() => Promise<void>) | null = null;
+// Se guarda para cortar los pedidos a la IA que estén en curso al cerrar la app.
+let cancelarIA: (() => void) | null = null;
 let cerrando = false;
 
 // Raíz global bajo la que cuelgan los proyectos (según el comentario de DepsSincronizacion: hoy 2).
@@ -659,6 +669,20 @@ function wireDependencies(): ProcesoSesionEstudio {
   );
   registerSpotifyIpc(clienteSpotify);
 
+  const materialIA = new MaterialIA(
+    obtenerArchivo,
+    almacenamiento,
+    new GeneradorMaterialIA(routerSinConectar, {
+      maxTokens: Number(process.env.IA_MAX_TOKENS_FRAGMENTO) || 3000,
+      solapamientoTokens: 150,
+    }),
+    colaSinConectar,
+    new GuardarMaterialIA(persistencia),
+    new ListarMaterialesIA(persistencia),
+  );
+  registerMaterialIAIpc(materialIA, (canal, datos) => mainWindow?.webContents.send(canal, datos));
+  cancelarIA = () => materialIA.cancelarTodo();
+
   return proceso;
 }
 
@@ -764,6 +788,8 @@ app.on('before-quit', (event) => {
   if (cerrando) return;
   event.preventDefault();
   cerrando = true;
+
+  cancelarIA?.();
 
   void (async () => {
     // Primero se frena el barrido de la sincronización: si no, sigue consultando la base ya cerrada.

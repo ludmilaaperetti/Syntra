@@ -23,11 +23,8 @@ type Borrador = { x: number; y: number; texto: string };
 // Muestra el PDF con react-pdf y lo edita con pdf-lib: rotar, eliminar páginas y escribir texto sobre la página.
 
 export function VisorPdf({ contenido, onGuardar, soloLectura = false, ancho = ANCHO_PAGINA }: VisorPdfProps) {
-<<<<<<< HEAD
-
-=======
   const { confirmar } = usarAvisos();
->>>>>>> 7515a78ec1217662848dfbed2a9af7a1b280395f
+
   const [bytes, setBytes] = useState(contenido);
   const [paginas, setPaginas] = useState(0);
   const [actual, setActual] = useState(1);

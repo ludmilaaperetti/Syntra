@@ -10,6 +10,8 @@ import { MenuAbrirCon } from './menuAbrirCon';
 import { BannerEdicion } from '../proyectos/bannerEdicion';
 import { ModalConflicto } from '../proyectos/modalConflicto';
 import { useEdicionDeElemento } from '../../hooks/useEdicionCompartida';
+import { GenerarConIA } from '../ia/generarConIA';
+import { esFuenteIA } from '../../types/ia';
 import '../../styles/visor.css';
 
 interface VisorArchivoProps {
@@ -28,6 +30,7 @@ export function VisorArchivo({ archivo, onCerrar, onGuardado, soloLectura = fals
   const [aviso, setAviso] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
   const [resolviendo, setResolviendo] = useState(false);
+  const [conIA, setConIA] = useState(false);
   const tipo = tipoVisor(archivo.extension);
 
   // Archivo de un proyecto compartido: mientras está abierto se toma el bloqueo, así nadie más lo
@@ -87,6 +90,9 @@ export function VisorArchivo({ archivo, onCerrar, onGuardado, soloLectura = fals
         <header className="visor__encabezado">
           <h3 className="visor__titulo">{archivo.nombre}.{archivo.extension}</h3>
           <div className="visor__acciones">
+            {esFuenteIA(archivo.extension) && (
+              <button className="visor-boton" onClick={() => setConIA(true)}>Generar con IA</button>
+            )}
             <MenuAbrirCon archivo={archivo} onError={setError} />
             <button className="visor-boton visor-boton--contorno" onClick={onCerrar}>Cerrar</button>
           </div>
@@ -109,6 +115,8 @@ export function VisorArchivo({ archivo, onCerrar, onGuardado, soloLectura = fals
           {contenido && tipo === 'texto' && <VisorTexto contenido={contenido} onGuardar={guardarBytes} soloLectura={sinEdicion} />}
         </div>
       </div>
+
+      {conIA && <GenerarConIA archivo={archivo} onCerrar={() => setConIA(false)} />}
 
       {resolviendo && clave && (
         <ModalConflicto clave={clave} onCerrar={() => setResolviendo(false)} onResuelto={alResolver} />
