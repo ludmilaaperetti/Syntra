@@ -7,6 +7,9 @@ import { is } from '@electron-toolkit/utils';
 import { pool, verifyDbConnection } from './persistencia/baseDeDatos';
 import { Persistencia } from './persistencia/persistencia';
 
+import { crearServiciosIA } from './logicaNoPersistente/gestionDeIa/index.js';
+import { registrarIpcIA } from './ipc/ia.ipc.js';
+
 // ---------------------------------------------------------------------------
 // userData por instancia: DEBE hacerse antes de cualquier otra cosa que use
 // app.getPath('userData') (id-cliente-sync.txt, sync-secretos.json, etc.).
@@ -752,6 +755,14 @@ app.whenReady().then(async () => {
   console.error('[startup] Falló el arranque:', err);
   app.quit();
 });
+
+const carpeta = process.env.SYNTRA_DATA_DIR;           // ej: ./electron-data-1
+if (carpeta) app.setPath('userData', carpeta);
+
+const ia = crearServiciosIA({
+  alProgreso: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:progreso', e)),
+});
+registrarIpcIA(ia);
 
 app.on('window-all-closed', () => {
   // El pool se cierra en before-quit, después de liberar los bloqueos de edición.
