@@ -31,6 +31,24 @@ function crearTransporter() {
 const escaparHtml = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+interface ColoresCorreo {
+    primario: string;
+    fondo: string;
+    superficie: string;
+    borde: string;
+    texto: string;
+    suave: string;
+}
+
+const COLORES_CORREO_PREDETERMINADOS: ColoresCorreo = {
+    primario: '#5277b8',
+    fondo: '#f3f6fb',
+    superficie: '#ffffff',
+    borde: '#dce5f0',
+    texto: '#14233b',
+    suave: '#edf3fc',
+};
+
 export async function enviarCodigoVerificacion(destinatario: string, codigo: string): Promise<void> {
     const { transporter, from } = crearTransporter();
     const codigoHtml = escaparHtml(codigo);
@@ -55,22 +73,34 @@ export async function enviarInvitacionProyecto(
     nombreProyecto: string,
     nombreInvitador: string,
     enlace: string,
+    colores: ColoresCorreo = COLORES_CORREO_PREDETERMINADOS,
 ): Promise<void> {
     const { transporter, from } = crearTransporter();
     await transporter.sendMail({
         from,
         to: destinatario,
-        subject: `Invitación al proyecto "${nombreProyecto}"`,
+        subject: `Syntra | Invitación al proyecto "${nombreProyecto}"`,
         text:
             `${nombreInvitador} te invitó al proyecto "${nombreProyecto}".\n` +
-            `Para unirte, iniciá sesión en la aplicación con este mismo mail (${destinatario}), ` +
-            `andá a Proyectos > "Unirme con enlace" y pegá:\n${enlace}`,
-        html:
-            `<p><strong>${escaparHtml(nombreInvitador)}</strong> te invitó al proyecto ` +
-            `<strong>${escaparHtml(nombreProyecto)}</strong>.</p>` +
-            `<p>Iniciá sesión en la aplicación con este mismo mail (<strong>${escaparHtml(destinatario)}</strong>), ` +
-            `andá a <em>Proyectos &gt; Unirme con enlace</em> y pegá:</p>` +
-            `<p style="font-family:monospace;font-size:14px">${escaparHtml(enlace)}</p>`,
+            `Para unirte, seguí estos pasos:\n` +
+            `1. Ingresá a Syntra con este mail: ${destinatario}.\n` +
+            `2. Andá a Proyectos > Unirme con enlace.\n` +
+            `3. Pegá este enlace:\n${enlace}`,
+        html: `
+            <div style="margin:0;padding:32px 16px;background:${colores.fondo};font-family:Arial,sans-serif;color:${colores.texto}">
+                <div style="max-width:600px;margin:0 auto;padding:32px;background:${colores.superficie};border:1px solid ${colores.borde};border-radius:16px">
+                    <p style="margin:0 0 24px;color:${colores.primario};font-size:14px;font-weight:700;letter-spacing:2px">SYNTRA</p>
+                    <h1 style="margin:0 0 12px;font-size:24px;color:${colores.texto}">Te invitaron a un proyecto</h1>
+                    <p style="margin:0 0 20px;line-height:1.6"><strong>${escaparHtml(nombreInvitador)}</strong> te invitó a colaborar en <strong>${escaparHtml(nombreProyecto)}</strong>.</p>
+                    <p style="margin:0 0 12px;line-height:1.6">Para unirte, seguí estos pasos:</p>
+                    <ol style="margin:0 0 20px;padding-left:24px;line-height:1.8">
+                        <li style="padding-left:4px">Ingresá a Syntra con este mail: <strong>${escaparHtml(destinatario)}</strong>.</li>
+                        <li style="padding-left:4px">Andá a <strong>Proyectos &gt; Unirme con enlace</strong>.</li>
+                        <li style="padding-left:4px">Pegá este enlace:</li>
+                    </ol>
+                    <p style="margin:0;padding:16px;border-radius:10px;background:${colores.suave};color:${colores.primario};border:1px solid ${colores.borde};font-family:monospace;font-size:14px;line-height:1.5;overflow-wrap:anywhere">${escaparHtml(enlace)}</p>
+                </div>
+            </div>`,
     });
 }
 

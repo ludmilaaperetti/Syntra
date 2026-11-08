@@ -45,6 +45,15 @@ export type ListarProyectosDTO = z.infer<typeof ListarProyectosDTOSchema>;
 
 export const RolMiembroSchema = z.enum(['propietario', 'editor', 'lector']);
 
+const ColoresCorreoSchema = z.object({
+    primario: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    fondo: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    superficie: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    borde: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    texto: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+    suave: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+});
+
 export const AgregarMiembroDTOSchema = z.object({
     idProyecto: z.number().int(),
     idUsuarioSolicitante: z.number().int(),
@@ -58,6 +67,7 @@ export const AgregarMiembroPorMailDTOSchema = z.object({
     idUsuarioSolicitante: z.number().int(),
     mail: z.string().trim().email().max(254),
     rol: z.enum(['editor', 'lector']).default('editor'),
+    coloresCorreo: ColoresCorreoSchema.optional(),
 });
 export type AgregarMiembroPorMailDTO = z.infer<typeof AgregarMiembroPorMailDTOSchema>;
 
@@ -96,6 +106,7 @@ export const InvitarMiembroDTOSchema = z.object({
     idUsuarioSolicitante: z.number().int(),
     mail: z.string().trim().email().max(255),
     rol: z.enum(['editor', 'lector']),
+    coloresCorreo: ColoresCorreoSchema.optional(),
 });
 export type InvitarMiembroDTO = z.infer<typeof InvitarMiembroDTOSchema>;
 

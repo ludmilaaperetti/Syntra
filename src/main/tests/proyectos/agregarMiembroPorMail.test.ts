@@ -12,8 +12,24 @@ let bd: BDFalsa;
 let sync: SyncFalso;
 const correo = vi.mocked(enviarInvitacionProyecto);
 
-const ejecutar = (mail: string, idSolicitante = 10, rol: 'editor' | 'lector' = 'editor') =>
-    new AgregarMiembroPorMail(bd, sync as any).ejecutar({ idProyecto: 1, idUsuarioSolicitante: idSolicitante, mail, rol });
+const ejecutar = (
+    mail: string,
+    idSolicitante = 10,
+    rol: 'editor' | 'lector' = 'editor',
+    coloresCorreo?: { primario: string; fondo: string; superficie: string; borde: string; texto: string; suave: string },
+) =>
+    new AgregarMiembroPorMail(bd, sync as any).ejecutar({
+        idProyecto: 1, idUsuarioSolicitante: idSolicitante, mail, rol, coloresCorreo,
+    });
+
+const coloresCorreo = {
+    primario: '#4a47a3',
+    fondo: '#f6f5fb',
+    superficie: '#ffffff',
+    borde: '#dcd9ec',
+    texto: '#1d1a3a',
+    suave: '#eceaf7',
+};
 
 beforeEach(() => {
     correo.mockReset();
@@ -32,7 +48,16 @@ describe('invitar por mail', () => {
         const r = await ejecutar('  Nuevo@X.com ');
         expect(r).toEqual({ pendiente: true, mail: 'nuevo@x.com' });
         expect(sync.gestionarMiembroPorMail).toHaveBeenCalledWith('R1', 'nuevo@x.com', 'alta', 'editor');
-        expect(correo).toHaveBeenCalledWith('nuevo@x.com', 'Proy', 'Ana', 'proyecto-sync://unirse/tok');
+        expect(correo).toHaveBeenCalledWith('nuevo@x.com', 'Proy', 'Ana', 'proyecto-sync://unirse/tok', undefined);
+    });
+    it('usa en el correo los colores de la paleta de quien invita', async () => {
+        await ejecutar('nuevo@x.com', 10, 'editor', coloresCorreo);
+        expect(correo).toHaveBeenCalledWith('nuevo@x.com', 'Proy', 'Ana', 'proyecto-sync://unirse/tok', coloresCorreo);
+    });
+    it('rechaza valores de color que no sean hexadecimales', async () => {
+        await expect(ejecutar('nuevo@x.com', 10, 'editor', { ...coloresCorreo, primario: 'red; background:url(x)' }))
+            .rejects.toThrow();
+        expect(correo).not.toHaveBeenCalled();
     });
     it('respeta el rol elegido', async () => {
         await ejecutar('n@x.com', 10, 'lector');
