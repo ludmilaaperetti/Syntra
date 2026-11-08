@@ -24,12 +24,13 @@ type EstadoGuardado = 'guardado' | 'pendiente' | 'guardando' | 'error';
 interface EditorSesionProps {
   usuarioId: number;
   idSesion: number;
+  materia?: Materia | null;
 }
 
 // Editor de la sesión con pestañas. Cada pestaña se guarda en la base de datos y, con ella,
 // el Word de la sesión en Material. Guarda solo unos segundos después de escribir;
 // "Guardar" (o Ctrl+S) guarda en el momento y muestra el cartel de confirmación.
-export function EditorSesion({ usuarioId, idSesion }: EditorSesionProps) {
+export function EditorSesion({ usuarioId, idSesion, materia }: EditorSesionProps) {
   const avisos = usarAvisos();
   const [pestanas, setPestanas] = useState<PestanaSesion[]>([]);
   const [idActiva, setIdActiva] = useState<number | null>(null);
@@ -272,7 +273,8 @@ export function EditorSesion({ usuarioId, idSesion }: EditorSesionProps) {
         />
       )}
 
-      {eligiendoArchivo && <ModalAbrirMaterial onElegir={abrirArchivo} onCerrar={() => setEligiendoArchivo(false)} />}
+
+      {eligiendoArchivo && <ModalAbrirMaterial materia={materia} onElegir={abrirArchivo} onCerrar={() => setEligiendoArchivo(false)} />}
     </div>
   );
 }

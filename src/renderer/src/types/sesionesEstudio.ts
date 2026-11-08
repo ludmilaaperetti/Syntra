@@ -7,6 +7,8 @@ export type FasePomodoro = 'pomodoro' | 'descanso_corto' | 'descanso_largo';
 export interface Materia {
   idMateria: number;
   nombre: string;
+  estado?: string;
+  grupo?: string | null;
 }
 
 export interface MateriaConUso extends Materia {
@@ -66,6 +68,7 @@ export interface SesionEstudio {
   metas: ObjetivoSesion[];
   contenido: string;
   idArchivo: number | null;
+  idDeck: number | null;
 }
 
 export interface OpcionesSesionEstudio {
@@ -107,6 +110,7 @@ export interface CrearSesionEstudioEntrada {
   fechaProgramada: string;
   recibirNotificacion: boolean;
   metas: string[];
+  idDeck?: number | null;
 }
 
 export interface ModificarSesionEstudioEntrada {
@@ -120,6 +124,8 @@ export interface ModificarSesionEstudioEntrada {
   pomodoroMin?: number;
   descansoCortoMin?: number;
   descansoLargoMin?: number;
+  idDeck?: number | null;
+  idsMetodosEstudio?: number[];
 }
 
 // Funciones que expone el preload para este módulo (se suman al tipo Window.api en window.d.ts).
@@ -160,7 +166,7 @@ export interface SesionesEstudioApi {
   reiniciarPomodoro(usuarioId: number, idSesion: number): Promise<SesionEstudio>;
   cambiarFasePomodoro(datos: { usuarioId: number; idSesion: number; fase: FasePomodoro }): Promise<SesionEstudio>;
 
-  listarOpcionesSesionEstudio(): Promise<OpcionesSesionEstudio>;
+  listarOpcionesSesionEstudio(usuarioId: number): Promise<OpcionesSesionEstudio>;
   listarMaterias(usuarioId: number): Promise<MateriaConUso[]>;
   registrarMateria(datos: { nombre: string }): Promise<MateriaConUso>;
   modificarMateria(datos: { usuarioId: number; idMateria: number; nombre: string }): Promise<MateriaConUso>;

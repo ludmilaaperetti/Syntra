@@ -2,3 +2,8 @@ node_modules/
 .nvmrc
 .env
 out
+# Datos de Electron de las instancias de prueba de sincronización
+electron-data-*/
+
+package2.json
+docker-compose_2.yml

@@ -11,6 +11,7 @@ import {
   type BloqueUbicado, type DiaCronograma,
 } from "../../utils/cronograma";
 import { claseTono } from "../../utils/tonos";
+import { CronogramaProyectos } from "../../components/cronograma/cronogramaProyectos";
 import "../../styles/cronograma.css";
 
 type Vista = "mio" | "proyectos";
@@ -50,15 +51,21 @@ export function CronogramaPage() {
     Promise.all([
       window.api.listarHorarios({ usuarioId }),
       window.api.listarEventos({ usuarioId }),
-      window.api.listarMetas({ usuarioId }),
     ])
-      .then(([h, e, m]) => {
+      .then(([h, e]) => {
         setHorarios(h);
         setEventos(e);
-        setMetas(m);
       })
       .catch((e) => setError(mensajeDe(e)));
   }, []);
+
+  // Las metas personales se piden por semana: las que vencen entre el lunes y el domingo que se ven.
+  useEffect(() => {
+    if (!usuarioId) return;
+    window.api.listarMetas({ idUsuario: usuarioId, desde: fechaISO(inicio), hasta: fechaISO(sumarDias(inicio, 6)) })
+      .then(setMetas)
+      .catch((e) => setError(mensajeDe(e)));
+  }, [inicio]);
 
   // La línea de "ahora" se mueve sola.
   useEffect(() => {
@@ -120,10 +127,7 @@ export function CronogramaPage() {
         </div>
 
         {vista === "proyectos" ? (
-          <p className="cronograma__aviso">
-            El cronograma de proyectos se suma cuando unamos Proyectos: vas a ver las tareas de cada proyecto,
-            con un color por integrante.
-          </p>
+          usuarioId && <CronogramaProyectos idUsuario={usuarioId} eventos={eventos} />
         ) : (
           <>
             <div className="cronograma__filtros">
@@ -171,7 +175,7 @@ export function CronogramaPage() {
                         </button>
                       ))}
                       {dia.metas.map((meta) => (
-                        <span key={`m${meta.id}`} className={`cronograma__chip cronograma__chip--meta${meta.completada ? " cronograma__chip--hecha" : ""}`}>
+                        <span key={`m${meta.idMeta}`} className={`cronograma__chip cronograma__chip--meta${meta.completada ? " cronograma__chip--hecha" : ""}`}>
                           {meta.titulo}
                         </span>
                       ))}
@@ -222,4 +226,4 @@ export function CronogramaPage() {
       </div>
     </PlantillaLayout>
   );
-}
+}

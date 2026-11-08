@@ -1,0 +1,59 @@
+export type Prioridad = 'alta' | 'media' | 'baja';
+
+export interface Tarea {
+  idTarea: number;
+  // Identificador compartido entre PCs (columna id_global). Los ids locales no sirven para sincronizar.
+  idGlobal: string;
+  idProyecto: number;
+  idAsignadoGlobal: string | null;
+  titulo: string;
+  descripcion: string | null;
+  prioridad: Prioridad;
+  fechaLimite: string | null; // AAAA-MM-DD
+  fechaInicio: string | null; // AAAA-MM-DD
+  completada: boolean;
+  fechaCompletada: string | null;
+  completadaPorGlobal: string | null;
+  orden: number;
+  creadaPorGlobal: string;
+  fechaCreacion: string;
+}
+
+// Datos editables desde el formulario de tarea.
+export interface DatosTarea {
+  titulo: string;
+  descripcion: string | null;
+  prioridad: Prioridad;
+  fechaLimite: string | null;
+  fechaInicio: string | null;
+  idAsignadoGlobal: string | null; 
+}
+
+export type FiltroTareas = 'todas' | 'pendientes' | 'hechas' | 'sinAsignar';
+
+export type RolMiembro = 'propietario' | 'editor' | 'lector';
+
+// Integrante que puede tener tareas (propietario o editor).
+export interface MiembroTablero {
+  idGlobal: string;
+  nombre: string;
+  rol: RolMiembro;
+}
+
+export interface ColorMiembro {
+  fondo: string;
+  texto: string;
+}
+
+export interface ColumnaMiembro extends MiembroTablero {
+  color: ColorMiembro;
+  esYo: boolean;
+}
+
+export interface SegmentoAporte {
+  clave: string;
+  nombre: string;
+  hechas: number;
+  porcentaje: number; // sobre el total de tareas del proyecto
+  fondo: string;
+}

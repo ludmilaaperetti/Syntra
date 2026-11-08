@@ -1,6 +1,15 @@
 import { Categoria } from './entidades';
 
-// Conviere en objeto de tipo Categoria en un registro de BD
+export const COLUMNAS_CATEGORIA = 'id, id_global, usuario_id, id_proyecto, nombre';
+
 export function materializarCategoria(fila: any): Categoria {
-  return { id: fila.id, usuarioId: fila.usuario_id, nombre: fila.nombre };
+  const c: Categoria = {
+    id: fila.id,
+    idGlobal: fila.id_global,
+    usuarioId: fila.usuario_id ?? null,
+    idProyecto: fila.id_proyecto ?? null,
+    nombre: fila.nombre,
+  };
+  if ('nombre_proyecto' in fila) c.nombreProyecto = fila.nombre_proyecto ?? null;
+  return c;
 }

@@ -11,6 +11,11 @@ export const usuariosApi = {
     registrarRostro: (usuarioId: number, embedding: number[]) =>
         ipcRenderer.invoke("usuarios:registrarRostro", usuarioId, embedding),
     loginFacial: (embedding: number[]) => ipcRenderer.invoke("usuarios:loginFacial", embedding),
+    // Avisa al main que se cerró la sesión: detiene la sincronización de proyectos.
+    cerrarSesion: () => ipcRenderer.invoke("usuarios:cerrarSesion"),
+
+    obtenerIdGlobal: (idUsuario: number): Promise<string | null> =>
+    ipcRenderer.invoke('usuarios:idGlobal', idUsuario),
 
     // Gestion de perfil
     obtenerPerfil: (datos: unknown) => ipcRenderer.invoke("usuarios:obtenerPerfil", datos),

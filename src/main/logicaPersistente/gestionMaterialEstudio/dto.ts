@@ -21,12 +21,16 @@ export const ListarContenidoDTOSchema = BuscarNodosDTOSchema.extend({
     idPadre: z.number().int(),
     tipo: z.enum(['carpeta', 'archivo']).optional(),
     ordenarPor: z.enum(['nombre', 'tipo', 'fecha_carga', 'fecha_ultimo_acceso', 'fecha_ultima_modificacion', 'tamaño']).default('nombre'),
+    // Con materia: se buscan las carpetas de esa materia en todo el árbol, no solo en idPadre.
+    idMateria: z.number().int().positive().optional(),
 });
 export type ListarContenidoDTO = z.infer<typeof ListarContenidoDTOSchema>;
 
 export const ModificarNodoDTOSchema = z.object({
     id: z.number().int(),
     nombre: z.string().min(1).max(250),
+    // undefined = no tocar la materia; null = sacarla; un número = asociarla.
+    idMateria: z.number().int().positive().nullable().optional(),
 });
 export type ModificarNodoDTO = z.infer<typeof ModificarNodoDTOSchema>;
 
@@ -51,6 +55,15 @@ export const CrearArchivoDTOSchema = z.object({
     idPadre: z.number().int(),
 });
 export type CrearArchivoDTO = z.infer<typeof CrearArchivoDTOSchema>;
+
+// Subir una carpeta elegida con el selector del sistema.
+export const SubirCarpetaDTOSchema = z.object({ idPadre: z.number().int() });
+
+// Subir carpetas o archivos arrastrados desde el explorador.
+export const ImportarRutasDTOSchema = z.object({
+    idPadre: z.number().int(),
+    rutas: z.array(z.string().min(1)).min(1).max(100),
+});
 
 export const ModificarArchivoDTOSchema = z.object({
     id: z.number().int(),

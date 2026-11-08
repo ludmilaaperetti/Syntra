@@ -5,6 +5,8 @@ import { usuariosApi } from './apis/usuarios';
 import { eventosApi } from './apis/eventos';
 import { categoriasApi } from './apis/categorias';
 import { horariosApi } from './apis/horarios';
+import { materiasApi } from './apis/materias';
+import { cuadernosApi } from './apis/cuadernos';
 import { enlacesApi } from './apis/enlaces';
 import { driveApi } from './apis/drive';
 import { metasApi } from './apis/metas';
@@ -12,9 +14,13 @@ import { inicioApi } from './apis/inicio';
 import { flashcardsApi } from './apis/flashcards';
 import { repeticionEspaciadaApi } from './apis/repeticionEspaciada';
 import { notificacionesApi } from './apis/notificaciones';
+import { proyectosApi } from './apis/proyectos';
+import { tareasApi } from './apis/tareas';
+import { edicionApi } from './apis/edicion';
+import { portadasProyectosApi } from './apis/portadasProyectos';
+import { estadisticasApi } from './apis/estadisticas';
 import { sesionesEstudioApi } from './apis/sesionesEstudio';
 import { spotifyApi } from './apis/spotify';
-
 
 contextBridge.exposeInMainWorld('api', {
   ...nodosApi,
@@ -23,6 +29,8 @@ contextBridge.exposeInMainWorld('api', {
   ...eventosApi,
   ...categoriasApi,
   ...horariosApi,
+  ...materiasApi,
+  ...cuadernosApi,
   ...enlacesApi,
   ...driveApi,
   ...metasApi,
@@ -30,6 +38,11 @@ contextBridge.exposeInMainWorld('api', {
   ...flashcardsApi,
   ...repeticionEspaciadaApi,
   ...notificacionesApi,
+  ...proyectosApi,
+  ...tareasApi,
+  ...edicionApi,
+  ...portadasProyectosApi,
+  ...estadisticasApi,
   ...sesionesEstudioApi,
   ...spotifyApi,
 });

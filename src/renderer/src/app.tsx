@@ -13,6 +13,12 @@ import { cargarModelos } from "../lib/cargarModelos";
 import { Proximamente } from "./pages/proximamente/proximamente";
 import { EventosPage } from "./pages/eventos/eventosPage";
 import { HorariosPage } from "./pages/horarios/horariosPage";
+import { MateriasPage } from "./pages/materias/materiasPage";
+import { CuadernosPage } from "./pages/cuadernos/cuadernosPage";
+import { CuadernoPage } from "./pages/cuadernos/cuadernoPage";
+import { MiniEstante } from "./components/cuadernos/miniEstante";
+import { FormacionPage } from "./pages/materias/formacionPage";
+import { CargarPlanPage } from "./pages/materias/cargarPlanPage";
 import { PerfilPage } from "./pages/perfil/perfilPage";
 import { PanelPerfil } from "./pages/perfil/panelPerfil";
 import { AjustesPage } from "./pages/ajustes/ajustesPage";
@@ -20,12 +26,15 @@ import { MetodosPage } from "./pages/metodos/metodosPage";
 import { RepeticionEspaciadaPage } from "./pages/metodos/repeticionEspaciadaPage";
 import { DeckFlashcardsPage, EstudiarFlashcardsPage, FlashcardsPage } from "./pages/flashcards/flashcardsPage";
 import { CronogramaPage } from "./pages/cronograma/cronogramaPage";
+import { ProyectosPage } from "./pages/proyectos/proyectosPage";
+import { ProyectoDetallePage } from "./pages/proyectos/proyectoPage";
+import { TareasPage } from "./pages/proyectos/tareasPage";
+import { EstadisticasPage } from "./pages/estadisticas/estadisticasPage";
 import { SesionesEstudioPage } from "./pages/sesionesEstudio/sesionesEstudioPage";
 import { CrearSesionEstudioPage } from "./pages/sesionesEstudio/crearSesionEstudioPage";
 import { SesionEstudioPage } from "./pages/sesionesEstudio/sesionEstudioPage";
 import { ProveedorAvisos } from "./hooks/usarAvisos";
 import { ProveedorSpotify } from "./hooks/usarSpotify";
-
 
 export default function App() {
   const [mostrarSplash, setMostrarSplash] = useState(true);
@@ -49,9 +58,15 @@ export default function App() {
         <Route path="/verificar-codigo" element={<VerificarCodigoPage />} />
         <Route path="/cambioPassword" element={<CambiarPasswordPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/material" element={<NodoPage />} />
+        <Route path="/material" element={<NodoPage lateral={<MiniEstante />} />} />
         <Route path="/eventos" element={<EventosPage />} />
         <Route path="/horarios" element={<HorariosPage />} />
+        <Route path="/materias" element={<MateriasPage />} />
+        <Route path="/cuadernos" element={<CuadernosPage />} />
+        <Route path="/cuadernos/:idCuaderno" element={<CuadernoPage />} />
+        <Route path="/materias/formacion" element={<FormacionPage />} />
+        <Route path="/materias/formacion/:idFormacion" element={<FormacionPage />} />
+        <Route path="/materias/plan/:idFormacion" element={<CargarPlanPage />} />
         <Route path="/cronograma" element={<CronogramaPage />} />
         <Route path="/perfil" element={<PerfilPage />} />
         <Route path="/ajustes" element={<AjustesPage />} />
@@ -60,9 +75,14 @@ export default function App() {
         <Route path="/flashcards/:deckId" element={<DeckFlashcardsPage />} />
         <Route path="/flashcards/:deckId/estudiar" element={<EstudiarFlashcardsPage />} />
         <Route path="/repeticion-espaciada" element={<RepeticionEspaciadaPage />} />
+        <Route path="/proyectos" element={<ProyectosPage />} />
+        <Route path="/proyectos/:id" element={<ProyectoDetallePage />} />
+        <Route path="/proyectos/:id/eventos" element={<EventosPage />} />
+        <Route path="/proyectos/:id/tareas" element={<TareasPage />} />
         <Route path="/sesiones" element={<SesionesEstudioPage />} />
         <Route path="/sesiones/nueva" element={<CrearSesionEstudioPage />} />
         <Route path="/sesiones/:idSesion" element={<SesionEstudioPage />} />
+        <Route path="/estadisticas" element={<EstadisticasPage />} />
         <Route path="/proximamente/:id" element={<Proximamente />} />
       </Routes>
       <PanelPerfil />

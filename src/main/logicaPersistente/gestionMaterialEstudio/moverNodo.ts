@@ -2,6 +2,8 @@ import { MoverNodoDTO } from "./dto";
 import { materializarNodo } from "./materializador";
 import { Persistencia } from "../../persistencia/persistencia";
 import { Nodo } from "./entidades"
+import { registrarCambioContenido } from "../gestionDeProyectos/alcanceContenido";
+import { exigirPermisoNodo } from "./alcanceContenido";
 
 // Cambia el nodoPadre de uno o más nodos
 export class MoverNodo {
@@ -57,12 +59,23 @@ export class MoverNodo {
             throw new Error("No se puede mover un nodo dentro de uno de sus descendientes");
         }
 
+        // Permiso para sacar la carpeta del origen y para crear en el destino.
+        const proyOrigen = await exigirPermisoNodo(this.persistencia, id, 'carpeta.mover');
+        const proyDestino = await exigirPermisoNodo(this.persistencia, idNuevoPadre, 'carpeta.crear');
+        if (proyOrigen !== proyDestino) {
+            throw new Error('No se pueden mover carpetas entre proyectos distintos');
+        }
+
         const filas = await this.persistencia.ejecutar(
             `UPDATE nodos
             SET id_padre = $1
             WHERE id_nodo = $2 RETURNING *`,
             [idNuevoPadre, id]
         );
-        return materializarNodo(filas[0]);
+        const f = filas[0];
+        // Se encola contra el proyecto de DESTINO (si el destino es personal, no se encola nada).
+        await registrarCambioContenido(this.persistencia, 'nodo', f.id_nodo, 'mover',
+            f.id_global, f.id_padre, { nombre: f.nombre });
+        return materializarNodo(f);
     }
 }

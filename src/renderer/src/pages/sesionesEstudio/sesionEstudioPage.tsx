@@ -8,6 +8,7 @@ import { ListaObjetivos } from '../../components/sesionEstudio/listaObjetivos';
 import { PanelPomodoro, type ConfiguracionPomodoro } from '../../components/sesionEstudio/panelPomodoro';
 import { TarjetaLateral } from '../../components/sesionEstudio/tarjetaLateral';
 import { TarjetaProximaSesion } from '../../components/sesionEstudio/tarjetaProximaSesion';
+import { PanelMetodos } from '../../components/sesionEstudio/panelMetodos';
 import { ModalConfirmar } from '../../components/sesionEstudio/modalConfirmar';
 import { ReproductorSpotify } from '../../components/spotify/reproductorSpotify';
 import { usarAvisos } from '../../hooks/usarAvisos';
@@ -117,6 +118,15 @@ export function SesionEstudioPage() {
     );
   }
 
+  // Guarda el mazo de flashcards que se repasa en la sesión.
+  async function cambiarMazo(idDeck: number | null) {
+    await accion(
+      () => window.api.modificarSesionEstudio({ usuarioId, idSesion, idDeck }),
+      idDeck === null ? 'Se quitó el mazo de la sesión.' : 'Se eligió el mazo para la sesión.',
+      'No se pudo guardar el mazo.'
+    );
+  }
+
   // Tilda o destilda un meta y actualiza el estado local.
   async function alternarObjetivo(idObjetivo: number, completado: boolean) {
     try {
@@ -219,7 +229,7 @@ export function SesionEstudioPage() {
             )}
 
             <div className={`sesion__cuerpo${panelVisible ? '' : ' sesion__cuerpo--sin-panel'}`}>
-              <EditorSesion key={sesion.idSesion} usuarioId={usuarioId} idSesion={sesion.idSesion} />
+              <EditorSesion key={sesion.idSesion} usuarioId={usuarioId} idSesion={sesion.idSesion} materia={sesion.materiaAsociada} />
 
               {panelVisible ? (
                 <aside className="sesion__lateral" aria-label="Herramientas de la sesión">
@@ -257,15 +267,7 @@ export function SesionEstudioPage() {
                   </TarjetaLateral>
 
                   <TarjetaLateral titulo="Métodos de estudio" id="metodos">
-                    {sesion.metodosEstudio.length === 0 ? (
-                      <p className="sesion__nota">Esta sesión no tiene métodos de estudio asignados.</p>
-                    ) : (
-                      <div className="sesion__metodos">
-                        {sesion.metodosEstudio.map((m) => (
-                          <span key={m.idTipoMetodoEstudio} className="sesion__metodo">{m.nombre}</span>
-                        ))}
-                      </div>
-                    )}
+                    <PanelMetodos sesion={sesion} usuarioId={usuarioId} onCambiarMazo={cambiarMazo} />
                   </TarjetaLateral>
 
                   <TarjetaLateral titulo="Próxima sesión" id="proxima">

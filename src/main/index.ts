@@ -5,7 +5,19 @@ import { pathToFileURL } from 'url';
 import { is } from '@electron-toolkit/utils';
 
 import { pool, verifyDbConnection } from './persistencia/baseDeDatos';
-import { Persistencia } from './persistencia/Persistencia';
+import { Persistencia } from './persistencia/persistencia';
+
+// ---------------------------------------------------------------------------
+// userData por instancia: DEBE hacerse antes de cualquier otra cosa que use
+// app.getPath('userData') (id-cliente-sync.txt, sync-secretos.json, etc.).
+// ---------------------------------------------------------------------------
+const dirDatos = process.env.ELECTRON_USER_DATA_DIR;
+if (dirDatos) {
+  app.setPath('userData', resolve(dirDatos));
+} else if (process.env.INSTANCIA) {
+  app.setPath('userData', join(app.getPath('appData'), `${app.getName()}-${process.env.INSTANCIA}`));
+}
+console.log('[startup] userData =', app.getPath('userData'));
 
 // Gestion de material de estudio
 import { CrearNodo } from './logicaPersistente/gestionMaterialEstudio/crearNodo';
@@ -16,6 +28,7 @@ import { MoverNodo } from './logicaPersistente/gestionMaterialEstudio/moverNodo'
 import { Nodos } from './administracionDePersistencia/nodo';
 import { registrarNodosIpc } from './ipc/nodo.ipc';
 import { ListarContenido } from './logicaPersistente/gestionMaterialEstudio/listarContenido';
+import { BuscarNodosPorMateria } from './logicaPersistente/gestionMaterialEstudio/buscarNodosPorMateria';
 import { CrearArchivo } from './logicaPersistente/gestionMaterialEstudio/crearArchivo';
 import { Archivos } from './administracionDePersistencia/archivos';
 import { registerArchivosIpc } from './ipc/archivos.ipc';
@@ -32,7 +45,7 @@ import path from 'path';
 // Google Drive
 import { AlmacenTokensDrive } from './logicaNoPersistente/drive/almacenTokensDrive';
 import { cifradorElectron } from './logicaNoPersistente/drive/cifradorElectron';
-import { OAuthDrive } from './logicaNoPersistente/drive/oauthDrive';
+import { OAuthDrive, conCuenta } from './logicaNoPersistente/drive/oauthDrive';
 import { DriveCliente } from './logicaNoPersistente/drive/driveCliente';
 import { DriveServicio } from './logicaNoPersistente/drive/driveServicio';
 import { registerDriveIpc } from './ipc/drive.ipc';
@@ -75,17 +88,36 @@ import { ModificarHorario } from './logicaPersistente/gestionDeHorarios/modifica
 import { EliminarHorario } from './logicaPersistente/gestionDeHorarios/eliminarHorario';
 import { Horarios } from './administracionDePersistencia/horarios';
 import { registerHorariosIpc } from './ipc/horarios.ipc';
+
+// Gestion de materias
+import { ListarFormaciones } from './logicaPersistente/gestionDeMaterias/listarFormaciones';
+import { CrearFormacion } from './logicaPersistente/gestionDeMaterias/crearFormacion';
+import { ModificarFormacion } from './logicaPersistente/gestionDeMaterias/modificarFormacion';
+import { EliminarFormacion } from './logicaPersistente/gestionDeMaterias/eliminarFormacion';
+import { ListarMaterias } from './logicaPersistente/gestionDeMaterias/listarMaterias';
+import { CrearMaterias } from './logicaPersistente/gestionDeMaterias/crearMaterias';
+import { ModificarMateria } from './logicaPersistente/gestionDeMaterias/modificarMateria';
+import { EliminarMateria } from './logicaPersistente/gestionDeMaterias/eliminarMateria';
+import { ListarMateriasUsuario } from './logicaPersistente/gestionDeMaterias/listarMateriasUsuario';
+import { ListarCorrelativas } from './logicaPersistente/gestionDeMaterias/listarCorrelativas';
+import { GuardarCorrelativas } from './logicaPersistente/gestionDeMaterias/guardarCorrelativas';
+import { Materias } from './administracionDePersistencia/materias';
+import { ListarCuadernos } from './logicaPersistente/gestionDeCuadernos/listarCuadernos';
+import { ObtenerCuaderno } from './logicaPersistente/gestionDeCuadernos/obtenerCuaderno';
+import { CrearCuaderno } from './logicaPersistente/gestionDeCuadernos/crearCuaderno';
+import { ModificarCuaderno } from './logicaPersistente/gestionDeCuadernos/modificarCuaderno';
+import { EliminarCuaderno } from './logicaPersistente/gestionDeCuadernos/eliminarCuaderno';
+import { CrearNota } from './logicaPersistente/gestionDeCuadernos/crearNota';
+import { ModificarNota } from './logicaPersistente/gestionDeCuadernos/modificarNota';
+import { EliminarNota } from './logicaPersistente/gestionDeCuadernos/eliminarNota';
+import { AgregarMazo } from './logicaPersistente/gestionDeCuadernos/agregarMazo';
+import { QuitarMazo } from './logicaPersistente/gestionDeCuadernos/quitarMazo';
+import { Cuadernos } from './administracionDePersistencia/cuadernos';
+import { registerCuadernosIpc } from './ipc/cuadernos.ipc';
+import { registerMateriasIpc } from './ipc/materias.ipc';
 import { registerEnlacesIpc } from './ipc/enlaces.ipc';
 import { VerificarPassword } from './logicaPersistente/gestionDeUsuarios/verificarPassword';
 import { ActualizarRostro } from './logicaPersistente/gestionDeUsuarios/actualizarRostro';
-
-// Gestion de metas
-import { CrearMeta } from './logicaPersistente/gestionDeMetas/crearMeta';
-import { ListarMetas } from './logicaPersistente/gestionDeMetas/listarMetas';
-import { CompletarMeta } from './logicaPersistente/gestionDeMetas/completarMeta';
-import { EliminarMeta } from './logicaPersistente/gestionDeMetas/eliminarMeta';
-import { Metas } from './administracionDePersistencia/metas';
-import { registerMetasIpc } from './ipc/metas.ipc';
 
 // Pantalla de inicio
 import { ObtenerFondoInicio, ActualizarFondoInicio } from './logicaPersistente/gestionDeInicio/fondoInicio';
@@ -97,6 +129,10 @@ import { CrearDeck } from './logicaPersistente/gestionDeFlashcards/crearDeck';
 import { ListarDecks } from './logicaPersistente/gestionDeFlashcards/listarDecks';
 import { CrearFlashcard } from './logicaPersistente/gestionDeFlashcards/crearFlashcard';
 import { ListarFlashcards } from './logicaPersistente/gestionDeFlashcards/listarFlashcards';
+import { ModificarFlashcard } from './logicaPersistente/gestionDeFlashcards/modificarFlashcard';
+import { ModificarDeck } from './logicaPersistente/gestionDeFlashcards/modificarDeck';
+import { EliminarDecks } from './logicaPersistente/gestionDeFlashcards/eliminarDecks';
+import { EliminarFlashcards } from './logicaPersistente/gestionDeFlashcards/eliminarFlashcards';
 import { Flashcards } from './administracionDePersistencia/flashcards';
 import { registerFlashcardsIpc } from './ipc/flashcards.ipc';
 import { RegistrarRevision } from './logicaPersistente/gestionDeRepeticionEspaciada/registrarRevision';
@@ -118,6 +154,78 @@ import { Notificaciones } from './administracionDePersistencia/notificaciones';
 import { Notificador } from './logicaNoPersistente/notificaciones/notificador';
 import { VigiaNotificaciones } from './logicaNoPersistente/notificaciones/vigiaNotificaciones';
 import { registerNotificacionesIpc } from './ipc/notificaciones.ipc';
+
+// Gestion de proyectos
+import { CrearProyecto } from './logicaPersistente/gestionDeProyectos/crearProyecto';
+import { ModificarProyecto } from './logicaPersistente/gestionDeProyectos/modificarProyecto';
+import { EliminarProyecto } from './logicaPersistente/gestionDeProyectos/eliminarProyecto';
+import { ObtenerProyecto } from './logicaPersistente/gestionDeProyectos/obtenerProyecto';
+import { ListarProyectos } from './logicaPersistente/gestionDeProyectos/listarProyectos';
+import { ListarMiembros } from './logicaPersistente/gestionDeProyectos/listarMiembros';
+import { AgregarMiembroPorMail } from './logicaPersistente/gestionDeProyectos/agregarMiembroPorMail';
+import { AgregarMiembro } from './logicaPersistente/gestionDeProyectos/agregarMiembro';
+import { CambiarRolMiembro } from './logicaPersistente/gestionDeProyectos/cambiarRolMiembro';
+import { Proyectos } from './administracionDePersistencia/proyectos';
+import { registrarProyectosIpc } from './ipc/proyectos.ipc';
+import { ListarInvitaciones } from './logicaPersistente/gestionDeProyectos/listarInvitaciones';
+import { CancelarInvitacion } from './logicaPersistente/gestionDeProyectos/cancelarInvitacion';
+import {
+  ObtenerPortadaProyecto,
+  ActualizarPortadaProyecto,
+  QuitarPortadaProyecto,
+} from './logicaPersistente/gestionDeProyectos/portadaProyecto';
+import { PortadasProyectos } from './administracionDePersistencia/portadasProyectos';
+import { registerPortadasProyectosIpc } from './ipc/portadasProyectos.ipc';
+
+// Estadísticas
+import { ResumenProyectos } from './logicaPersistente/gestionDeEstadisticas/resumenProyectos';
+import { ResumenSesionesEstudio } from './logicaPersistente/gestionDeEstadisticas/resumenSesiones';
+import { ResumenDeMaterial } from './logicaPersistente/gestionDeEstadisticas/resumenMaterial';
+import { Estadisticas } from './administracionDePersistencia/estadisticas';
+import { registerEstadisticasIpc } from './ipc/estadisticas.ipc';
+// Gestion de edicion compartida y sincronizacion
+import {
+  componerSincronizacion,
+  crearProveedorIdentidad,
+} from './logicaPersistente/gestionDeProyectos/componerSincronizacion';
+import type { RegistroManejadores } from './logicaPersistente/gestionDeProyectos/edicionCompartida';
+import {
+  ManejadorEvento,
+  ManejadorMeta,
+  ManejadorTarea,
+} from './logicaPersistente/gestionDeProyectos/manejadoresEntidades';
+import { ManejadorCategoria } from './logicaPersistente/gestionDeCategorias/manejadorCategoria';
+import { ManejadorNodo, ManejadorArchivo } from './logicaPersistente/gestionDeProyectos/manejadoresContenido';
+import { Edicion } from './administracionDePersistencia/edicion';
+import { ClaveEdicion } from './logicaPersistente/gestionDeProyectos/claveEdicion';
+import { registerEdicionIpc } from './ipc/edicion.ipc'; // ajustá si tu archivo se llama distinto
+import {
+  fijarSesionSync,
+  limpiarSesionSync,
+  usuarioSesionSync,
+} from './sesionSync';
+
+// Gestion de metas
+import { Metas } from './administracionDePersistencia/metas';
+import { CrearMeta } from './logicaPersistente/gestionDeMetas/crearMeta';
+import { registerMetasIpc } from './ipc/metas.ipc';
+import { AlternarMeta } from './logicaPersistente/gestionDeMetas/alternarMeta';
+import { CopiarMetas } from './logicaPersistente/gestionDeMetas/copiarMetas';
+import { EliminarMeta } from './logicaPersistente/gestionDeMetas/eliminarMeta';
+import { EstadisticasMetasProyecto } from './logicaPersistente/gestionDeMetas/estadisticasMetas';
+import { ListarMetas } from './logicaPersistente/gestionDeMetas/listarMetas';
+import { ModificarMeta } from './logicaPersistente/gestionDeMetas/modificarMeta';
+
+// Gestion de tareas
+import { Tareas } from './administracionDePersistencia/tareas';
+import { CrearTarea } from './logicaPersistente/gestionDeTareas/crearTarea';
+import { ListarTareas } from './logicaPersistente/gestionDeTareas/listarTareas';
+import { ModificarTarea } from './logicaPersistente/gestionDeTareas/modificarTarea';
+import { AlternarTarea } from './logicaPersistente/gestionDeTareas/alternarTarea';
+import { AsignarTarea } from './logicaPersistente/gestionDeTareas/asignarTarea';
+import { RepartirTareas } from './logicaPersistente/gestionDeTareas/repartirTareas';
+import { EliminarTarea } from './logicaPersistente/gestionDeTareas/eliminarTarea';
+import { registerTareasIpc } from './ipc/tareas.ipc';
 
 // Gestion de sesion de estudio
 import { CrearSesionEstudio } from './logicaPersistente/gestionDeSesionEstudio/crearSesionEstudio';
@@ -181,6 +289,15 @@ function mostrarEnSistema(notificacion: Notificacion): void {
   mainWindow?.webContents.send('notificaciones:sonar');
 }
 
+// Se guarda para poder liberar los bloqueos de edición al cerrar la app.
+let edicion: Edicion | null = null;
+// Se guarda para frenar el barrido de la sincronización antes de cerrar la base al salir.
+let detenerSincronizacion: (() => Promise<void>) | null = null;
+let cerrando = false;
+
+// Raíz global bajo la que cuelgan los proyectos (según el comentario de DepsSincronizacion: hoy 2).
+const ID_NODO_PADRE_PROYECTOS = 2;
+
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'modelos',
@@ -202,7 +319,7 @@ function wireDependencies(): ProcesoSesionEstudio {
   const modificarNodo = new ModificarNodo(persistencia);
   const buscarNodos = new BuscarNodos(persistencia);
   const buscarArchivos = new BuscarArchivos(persistencia);
-  const listarContenido = new ListarContenido(buscarNodos, buscarArchivos);
+  const listarContenido = new ListarContenido(buscarNodos, buscarArchivos, persistencia, new BuscarNodosPorMateria(persistencia));
   const moverNodo = new MoverNodo(persistencia);
   const eliminarNodo = new EliminarNodo(persistencia);
   const nodos = new Nodos(crearNodo, modificarNodo, listarContenido, eliminarNodo, moverNodo);
@@ -231,11 +348,15 @@ function wireDependencies(): ProcesoSesionEstudio {
     new DriveCliente(() => oauth.obtenerAccessToken()),
     archivos,
     almacenamiento,
-    (url) => shell.openExternal(url),
+    // Abre el documento con la misma cuenta de Google con la que se dio el permiso.
+    async (url) => {
+      if (!oauth.cuenta()) await oauth.obtenerAccessToken().catch(() => {});
+      await shell.openExternal(conCuenta(url, oauth.cuenta()));
+    },
   );
   
 
-  // Gestion de usuarios
+  // Gestion de usuarios (el IPC se registra más abajo, cuando existe la sincronización)
   const iniciarSesion = new IniciarSesion(persistencia);
   const registrarUsuario = new RegistrarUsuario(persistencia);
   const verificarMail = new VerificarMail(persistencia);
@@ -251,7 +372,6 @@ function wireDependencies(): ProcesoSesionEstudio {
     new ActualizarFotoPerfil(persistencia, path.join(app.getPath('userData'), 'fotosPerfil')),
     verificarPassword, new ActualizarRostro(verificarPassword)
   );
-  registerUsuariosIpc(usuarios);
 
   // Gestion de eventos
   const crearEvento = new CrearEvento(persistencia);
@@ -275,10 +395,36 @@ function wireDependencies(): ProcesoSesionEstudio {
   );
   registerHorariosIpc(horarios);
 
+  // Gestion de materias
+  const materias = new Materias(
+    new ListarFormaciones(persistencia), new CrearFormacion(persistencia),
+    new ModificarFormacion(persistencia), new EliminarFormacion(persistencia),
+    new ListarMaterias(persistencia), new CrearMaterias(persistencia),
+    new ModificarMateria(persistencia), new EliminarMateria(persistencia),
+    new ListarMateriasUsuario(persistencia),
+    new ListarCorrelativas(persistencia), new GuardarCorrelativas(persistencia)
+  );
+  registerMateriasIpc(materias);
+
+  // Gestion de cuadernos (los crea el usuario y les asocia una materia) y sus notas
+  const listarCuadernos = new ListarCuadernos(persistencia);
+  const cuadernos = new Cuadernos(
+    listarCuadernos, new ObtenerCuaderno(persistencia, listarCuadernos),
+    new CrearCuaderno(persistencia), new ModificarCuaderno(persistencia), new EliminarCuaderno(persistencia),
+    new CrearNota(persistencia), new ModificarNota(persistencia), new EliminarNota(persistencia),
+    new AgregarMazo(persistencia), new QuitarMazo(persistencia)
+  );
+  registerCuadernosIpc(cuadernos);
+
   // Gestion de metas
   const metas = new Metas(
-    new CrearMeta(persistencia), new ListarMetas(persistencia),
-    new CompletarMeta(persistencia), new EliminarMeta(persistencia)
+    new CrearMeta(persistencia),
+    new ListarMetas(persistencia),
+    new ModificarMeta(persistencia),
+    new AlternarMeta(persistencia),
+    new EliminarMeta(persistencia),
+    new CopiarMetas(persistencia),
+    new EstadisticasMetasProyecto(persistencia),
   );
   registerMetasIpc(metas);
 
@@ -301,7 +447,7 @@ function wireDependencies(): ProcesoSesionEstudio {
   const vigia = new VigiaNotificaciones(
     {
       eventos: (usuarioId, desde) => eventos.listar({ usuarioId, desde }),
-      metas: (usuarioId) => metas.listar({ usuarioId }),
+      metas: (usuarioId, dia) => metas.listar({ idUsuario: usuarioId, desde: dia, hasta: dia }),
     },
     notificador
   );
@@ -315,7 +461,11 @@ function wireDependencies(): ProcesoSesionEstudio {
     new CrearDeck(persistencia),
     new ListarDecks(persistencia),
     new CrearFlashcard(persistencia),
-    new ListarFlashcards(persistencia)
+    new ListarFlashcards(persistencia),
+    new ModificarFlashcard(persistencia),
+    new ModificarDeck(persistencia),
+    new EliminarDecks(persistencia),
+    new EliminarFlashcards(persistencia)
   );
   registerFlashcardsIpc(flashcards);
 
@@ -326,6 +476,118 @@ function wireDependencies(): ProcesoSesionEstudio {
     new GuardarRepeticionMaterial(persistencia)
   );
   registerRepeticionEspaciadaIpc(repeticionEspaciada);
+
+  // Sincronizacion y edicion compartida
+  const identidad = crearProveedorIdentidad(
+    async () => {
+      const idUsuario = usuarioSesionSync();
+      if (idUsuario === null) throw new Error('No hay sesión iniciada para sincronizar.');
+
+      const f = await persistencia.ejecutar<{ email: string; nombre: string; apodo: string | null }>(
+        `SELECT email, nombre, apodo FROM usuarios WHERE id_usuario = $1`,
+        [idUsuario],
+      );
+      if (!f[0]) throw new Error(`Usuario ${idUsuario} inexistente`);
+      return { mail: f[0].email, nombre: f[0].apodo?.trim() || f[0].nombre };
+    },
+  );
+
+  // Un manejador por entidad: aplican en la BD local los cambios que llegan de otros miembros.
+  // Sin manejador, un cambio remoto se descarta y la versión igual avanza (se pierde para siempre).
+  const manejadores: RegistroManejadores = {
+    nodo: new ManejadorNodo(persistencia),
+    archivo: new ManejadorArchivo(persistencia, almacenamiento),
+    evento: new ManejadorEvento(persistencia, usuarioSesionSync),
+    meta: new ManejadorMeta(persistencia, usuarioSesionSync),
+    tarea: new ManejadorTarea(persistencia, usuarioSesionSync),
+    categoria: new ManejadorCategoria(persistencia, usuarioSesionSync),
+  };
+
+  const sync = componerSincronizacion({
+    persistencia,
+    crearNodo,
+    manejadores,
+    identidad,
+    mailDe: async (idUsuario: number) => {
+      const f = await persistencia.ejecutar<{ email: string }>(
+        `SELECT email FROM usuarios WHERE id_usuario = $1`,
+        [idUsuario],
+      );
+      if (!f[0]) throw new Error(`Usuario ${idUsuario} inexistente`);
+      return f[0].email;
+    },
+    emitir: (e) => mainWindow?.webContents.send('sincronizacion:evento', e),
+    idNodoPadreProyectos: ID_NODO_PADRE_PROYECTOS,
+  });
+
+  // IPC de usuarios: ahora que existe la sincronización, el login la arranca y el logout la detiene.
+  registerUsuariosIpc(usuarios, {
+    alIniciarSesion: (idUsuario, password) => {
+      console.log('[sync] hook de login, usuario:', idUsuario);
+      fijarSesionSync(idUsuario, password);
+      void sync.coordinador.iniciar(idUsuario)
+        .then(() => console.log('[sync] coordinador iniciado'))
+        .catch((e) => console.warn('[sync] no pudo iniciar:', e));
+    },
+    alCerrarSesion: async () => {
+      await sync.coordinador.detener();
+      limpiarSesionSync();
+    },
+  });
+
+  // Gestion de proyectos (usa las piezas reales de la sincronización, sin mock)
+  const agregarMiembro = new AgregarMiembro(persistencia, sync.sync);
+  const listarInvitaciones = new ListarInvitaciones(persistencia);
+  const agregarMiembroPorMail = new AgregarMiembroPorMail(persistencia, sync.sync);
+  const cancelarInvitacion = new CancelarInvitacion(persistencia, sync.sync);
+  void agregarMiembro;
+
+  const proyectos = new Proyectos(
+    new CrearProyecto(persistencia, crearNodo),
+    new ModificarProyecto(persistencia, modificarNodo),
+    new EliminarProyecto(persistencia, sync.sync, (id) => sync.coordinador.dejarDeVigilar(id)),
+    new ObtenerProyecto(persistencia),
+    new ListarProyectos(persistencia),
+    sync.agregarMiembro,
+    sync.quitarMiembro,
+    new ListarMiembros(persistencia, sync.sync),
+    sync.sincronizarProyecto,
+    agregarMiembroPorMail,
+    new CambiarRolMiembro(persistencia, sync.sync),
+    listarInvitaciones,
+    cancelarInvitacion,
+  );
+  registrarProyectosIpc(proyectos);
+
+  // Portadas de los proyectos (locales de cada compu)
+  const portadas = new PortadasProyectos(
+    new ObtenerPortadaProyecto(persistencia),
+    new ActualizarPortadaProyecto(persistencia, path.join(app.getPath('userData'), 'portadasProyectos')),
+    new QuitarPortadaProyecto(persistencia)
+  );
+  registerPortadasProyectosIpc(portadas);
+
+  // Estadísticas
+  registerEstadisticasIpc(new Estadisticas(
+    new ResumenProyectos(persistencia), new ResumenSesionesEstudio(persistencia), new ResumenDeMaterial(persistencia)
+  ));
+
+  // Gestion de edicion y conflictos
+  edicion = new Edicion(sync.edicion, sync.coordinador, sync.unirseAProyecto, new ClaveEdicion(persistencia));
+  detenerSincronizacion = () => sync.coordinador.detener();
+  registerEdicionIpc(edicion);
+
+  // Gestion de tareas
+  const tareas = new Tareas(
+    new CrearTarea(persistencia),
+    new ListarTareas(persistencia),
+    new ModificarTarea(persistencia),
+    new AlternarTarea(persistencia),
+    new AsignarTarea(persistencia),
+    new RepartirTareas(persistencia),
+    new EliminarTarea(persistencia),
+  );
+  registerTareasIpc(tareas);
 
   // Gestion de sesion de estudio (el contenido se guarda en la base y en su Word de Material)
   const documentoSesion = new DocumentoSesionEstudio(archivos, nodos, persistencia);
@@ -354,11 +616,11 @@ function wireDependencies(): ProcesoSesionEstudio {
     importarDesdeMaterial: new ImportarContenidoDesdeMaterial(persistencia),
   });
   // Se registra acá porque al guardar un Word desde Material avisa a Sesión de estudio.
-  registerArchivosIpc(archivos, almacenamiento, (idArchivo, html) =>
+  registerArchivosIpc(archivos, almacenamiento, nodos, (idArchivo, html) =>
     sesionesEstudio.importarDesdeMaterial(idArchivo, html)
   );
   // Lo mismo al traer la versión de Google Drive: si es el Word de una sesión, la sesión se actualiza.
-  registerDriveIpc(driveServicio, async (idArchivo) => {
+  registerDriveIpc(driveServicio, () => oauth.cancelar(), async (idArchivo) => {
     const archivo = await archivos.obtener({ id: idArchivo });
     if (archivo.extension.toLowerCase() !== 'docx') return;
     const html = await documentoSesion.leerHtml(almacenamiento.rutaCompleta(archivo.rutaFisica));
@@ -463,10 +725,11 @@ app.whenReady().then(async () => {
     return;
   }
 
+  // Los handlers IPC se registran antes de crear la ventana.
   procesoSesion = wireDependencies();
   const recordatorios = new EnviarRecordatoriosPendientes(new Persistencia(pool));
   let recordatoriosEnCurso = false;
-  const enviarRecordatorios = async () => {
+  const enviarRecordatorios = async (): Promise<void> => {
     if (recordatoriosEnCurso) return;
     recordatoriosEnCurso = true;
     try {
@@ -485,10 +748,40 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+}).catch((err) => {
+  console.error('[startup] Falló el arranque:', err);
+  app.quit();
 });
 
-app.on('window-all-closed', async () => {
+app.on('window-all-closed', () => {
+  // El pool se cierra en before-quit, después de liberar los bloqueos de edición.
   procesoSesion?.detener();
-  await pool.end();
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Cierre ordenado: libera los bloqueos de edición y recién después cierra el pool.
+app.on('before-quit', (event) => {
+  if (cerrando) return;
+  event.preventDefault();
+  cerrando = true;
+
+  void (async () => {
+    // Primero se frena el barrido de la sincronización: si no, sigue consultando la base ya cerrada.
+    try {
+      await detenerSincronizacion?.();
+    } catch (err) {
+      console.error('[shutdown] No se pudo frenar la sincronización:', err);
+    }
+    try {
+      await edicion?.cerrarTodas();
+    } catch (err) {
+      console.error('[shutdown] No se pudieron liberar los bloqueos:', err);
+    }
+    try {
+      await pool.end();
+    } catch (err) {
+      console.error('[shutdown] Error al cerrar el pool:', err);
+    }
+    app.quit();
+  })();
 });
