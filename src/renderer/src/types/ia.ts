@@ -75,21 +75,22 @@ export interface MaterialIA {
   fechaCreacion: string;
 }
 
+// Evento 'ia:progreso' de la cola de IA (una sola cola para toda la IA).
 export interface ProgresoIA {
-  trabajoId: string;
-  estado: 'en_cola' | 'en_curso' | 'completado' | 'cancelado' | 'error';
-  parte: number;
-  total: number;
-  proveedor?: string;
-  mensaje?: string;
+  id: string;
+  estado: 'en_cola' | 'ejecutando' | 'terminado' | 'cancelado' | 'error';
+  hechas?: number;
+  total?: number;
 }
 
 export interface MaterialIAApi {
-  generarMaterialIA(datos: { trabajoId: string; idArchivo: number; tipo: TipoMaterialIA }):
+  generarMaterialIA(datos: { trabajoId: string; idArchivo: number; tipo: TipoMaterialIA; preferencias?: string }):
     Promise<{ ok: true; propuesta: PropuestaIA } | { ok: false; cancelado: true }>;
-  cancelarMaterialIA(datos: { trabajoId: string }): Promise<boolean>;
   descartarMaterialIA(datos: { trabajoId: string }): Promise<boolean>;
   guardarMaterialIA(datos: { trabajoId: string; contenido: ContenidoIA }): Promise<MaterialIA>;
   listarMaterialesIA(datos?: { idArchivo?: number }): Promise<MaterialIA[]>;
-  alProgresoIA(callback: (progreso: ProgresoIA) => void): () => void;
+  // De la API general de IA (cola): los que usa el front de Material con IA.
+  cancelar(idTrabajo: string): Promise<boolean>;
+  onProgreso(callback: (progreso: ProgresoIA) => void): () => void;
 }
+

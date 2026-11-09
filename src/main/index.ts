@@ -264,9 +264,10 @@ import { AutenticacionSpotify } from './logicaNoPersistente/spotify/autenticacio
 import { ClienteSpotify } from './logicaNoPersistente/spotify/clienteSpotify';
 import { registerSpotifyIpc } from './ipc/spotify.ipc';
 
-// Material con IA 
+// Inteligencia artificial (router, proveedores, claves y cola) y Material con IA
+import { crearServiciosIA } from './logicaNoPersistente/ia';
+import { registrarIpcIA } from './ipc/ia.ipc';
 import { GeneradorMaterialIA } from './logicaNoPersistente/ia/generadorMaterialIA';
-import { routerSinConectar, colaSinConectar } from './logicaNoPersistente/ia/sinConectar';
 import { GuardarMaterialIA } from './logicaPersistente/gestionDeMaterialIA/guardarMaterialIA';
 import { ListarMaterialesIA } from './logicaPersistente/gestionDeMaterialIA/listarMaterialesIA';
 import { MaterialIA } from './administracionDePersistencia/materialIA';
@@ -668,20 +669,27 @@ function wireDependencies(): ProcesoSesionEstudio {
     new AutenticacionSpotify(configSpotify, (url) => shell.openExternal(url))
   );
   registerSpotifyIpc(clienteSpotify);
+  // Inteligencia artificial: router (Luna → Gemini → Gemma), claves y una sola cola para todo.
+  const ia = crearServiciosIA({
+    alProgreso: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:progreso', e)),
+  });
+  registrarIpcIA(ia);
 
+  // Material con IA: la IA propone, el usuario revisa en la pantalla previa y recién ahí se guarda.
   const materialIA = new MaterialIA(
     obtenerArchivo,
     almacenamiento,
-    new GeneradorMaterialIA(routerSinConectar, {
+    new GeneradorMaterialIA(ia.router, {
       maxTokens: Number(process.env.IA_MAX_TOKENS_FRAGMENTO) || 3000,
       solapamientoTokens: 150,
     }),
-    colaSinConectar,
+    ia.cola,
     new GuardarMaterialIA(persistencia),
     new ListarMaterialesIA(persistencia),
   );
-  registerMaterialIAIpc(materialIA, (canal, datos) => mainWindow?.webContents.send(canal, datos));
-  cancelarIA = () => materialIA.cancelarTodo();
+  registerMaterialIAIpc(materialIA);
+  // Una sola cola para toda la IA: al cerrar se cancela todo lo que esté en curso.
+  cancelarIA = () => ia.cola.cancelarTodo();
 
   return proceso;
 }
@@ -776,6 +784,10 @@ app.whenReady().then(async () => {
   console.error('[startup] Falló el arranque:', err);
   app.quit();
 });
+
+const carpeta = process.env.SYNTRA_DATA_DIR;           // ej: ./electron-data-1
+if (carpeta) app.setPath('userData', carpeta);
+
 
 app.on('window-all-closed', () => {
   // El pool se cierra en before-quit, después de liberar los bloqueos de edición.

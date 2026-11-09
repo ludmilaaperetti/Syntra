@@ -1,0 +1,45 @@
+import { ipcRenderer } from 'electron';
+
+export interface EventoProgresoIA {
+  id: string;
+  estado: 'en_cola' | 'ejecutando' | 'terminado' | 'cancelado' | 'error';
+  hechas?: number;
+  total?: number;
+}
+
+export const iaApi = {
+  // Router y cola
+  generar: (pedido: {
+    idTrabajo: string;
+    tarea: 'resumen' | 'cuestionario' | 'mapaMental' | 'flashcards';
+    texto: string;
+    preferencias?: string;
+  }) => ipcRenderer.invoke('ia:generar', pedido),
+  cancelar: (idTrabajo: string) => ipcRenderer.invoke('ia:cancelar', idTrabajo),
+
+  /** Devuelve la función para desuscribirse: llamala al desmontar el componente. */
+  onProgreso: (cb: (e: EventoProgresoIA) => void) => {
+    const h = (_: unknown, e: EventoProgresoIA) => cb(e);
+    ipcRenderer.on('ia:progreso', h);
+    return () => ipcRenderer.removeListener('ia:progreso', h);
+  },
+
+  // Claves 
+  guardarClave: (proveedor: 'luna' | 'gemini', clave: string) => ipcRenderer.invoke('ia:guardarClave', proveedor, clave),
+  tieneClave: (proveedor: 'luna' | 'gemini') => ipcRenderer.invoke('ia:tieneClave', proveedor),
+  claveEnmascarada: (proveedor: 'luna' | 'gemini') => ipcRenderer.invoke('ia:claveEnmascarada', proveedor),
+  borrarClave: (proveedor: 'luna' | 'gemini') => ipcRenderer.invoke('ia:borrarClave', proveedor),
+
+  
+  probarConexion: (proveedor: 'luna' | 'gemini' | 'gemma') => ipcRenderer.invoke('ia:probarConexion', proveedor),
+  estadoOllama: () => ipcRenderer.invoke('ia:estadoOllama'),
+
+  // Material con IA: generar desde un archivo de Material → pantalla previa → guardar.
+  // Para el progreso y para cancelar se usan onProgreso y cancelar (la cola es una sola).
+  generarMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:generar', datos),
+  descartarMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:descartar', datos),
+  guardarMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:guardar', datos),
+  listarMaterialesIA: (datos?: unknown) => ipcRenderer.invoke('materialIA:listar', datos),
+};
+
+export type ApiIA = typeof iaApi;

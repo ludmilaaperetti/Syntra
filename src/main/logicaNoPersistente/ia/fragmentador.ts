@@ -71,6 +71,12 @@ export function fragmentar(texto: string, opciones: OpcionesFragmentador = {}): 
   }));
 }
 
+// Solo los textos, con un máximo en caracteres y sin solapamiento (lo usa ia:generar).
+export function fragmentarEnTextos(texto: string, maxCaracteres = 12_000): string[] {
+  const maxTokens = Math.max(1, Math.floor(maxCaracteres / 4)); // ~4 caracteres por token
+  return fragmentar(texto, { maxTokens, solapamientoTokens: 0 }).map((f) => f.texto);
+}
+
 function dividirPorTitulos(texto: string): Seccion[] {
   const secciones: Seccion[] = [];
   let actual: Seccion = { texto: '' };

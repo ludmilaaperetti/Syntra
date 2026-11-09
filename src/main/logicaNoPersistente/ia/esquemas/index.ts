@@ -7,9 +7,10 @@ import { mapaMentalSchema, type MapaMental } from './mapaMental';
 export * from './resumen';
 export * from './cuestionario';
 export * from './mapaMental';
+export * from './flashcards';
 
-// Un esquema por tipo. Para sumar flashcards, guía de preguntas o extraer plan:
-// agregarlo acá, en TIPOS_MATERIAL_IA, en COMBINAR y en prompts.ts.
+// Un esquema por tipo de Material con IA. El registro de TODAS las tareas de IA (con su prompt
+// y su JSON Schema) está en ../tareas.ts.
 export const ESQUEMAS_IA = {
   resumen: resumenSchema,
   cuestionario: cuestionarioSchema,
@@ -24,10 +25,10 @@ export interface ContenidoPorTipo {
 
 export type ContenidoIA = ContenidoPorTipo[TipoMaterialIA];
 
-// Esquema zod → JSON Schema para el modelo (Azure response_format, Gemini responseJsonSchema, Ollama format).
-// Se saca "$schema" porque algunos proveedores rechazan claves que no conocen.
-export function aJsonSchema(esquema: z.ZodType): Record<string, unknown> {
-  const { $schema: _sinUsar, ...resto } = z.toJSONSchema(esquema, { target: 'draft-7', unrepresentable: 'any' }) as Record<string, unknown>;
+// Esquema zod → JSON Schema para pasárselo al modelo. Se quita `$schema`: algunos proveedores lo rechazan.
+// Regla de Azure (modo estricto): nada de `.optional()`; usá `.nullable()` para campos opcionales.
+export function aJsonSchema(esquema: z.ZodType): object {
+  const { $schema: _omitido, ...resto } = z.toJSONSchema(esquema) as Record<string, unknown>;
   return resto;
 }
 

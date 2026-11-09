@@ -21,7 +21,7 @@ import { portadasProyectosApi } from './apis/portadasProyectos';
 import { estadisticasApi } from './apis/estadisticas';
 import { sesionesEstudioApi } from './apis/sesionesEstudio';
 import { spotifyApi } from './apis/spotify';
-import { materialIAApi } from './apis/materialIA';
+import { iaApi } from './apis/ia';
 
 contextBridge.exposeInMainWorld('api', {
   ...nodosApi,
@@ -46,5 +46,5 @@ contextBridge.exposeInMainWorld('api', {
   ...estadisticasApi,
   ...sesionesEstudioApi,
   ...spotifyApi,
-  ...materialIAApi,
+  ...iaApi,
 });

@@ -12,7 +12,7 @@ import { Almacenamiento } from '../persistencia/almacenamiento';
 import { usuarioSesionSync } from '../sesionSync';
 import { ESQUEMAS_IA } from '../logicaNoPersistente/ia/esquemas';
 import { esFuenteIA, type TipoMaterialIA } from '../logicaNoPersistente/ia/tipos';
-import type { ColaIA, ProgresoIA } from '../logicaNoPersistente/ia/contratos';
+import type { ColaEjecucion } from '../logicaNoPersistente/ia/colaEjecucion';
 import { GeneradorMaterialIA } from '../logicaNoPersistente/ia/generadorMaterialIA';
 
 interface Pendiente {
@@ -37,15 +37,11 @@ export class MaterialIA {
     private readonly obtenerArchivoCasoUso: ObtenerArchivo,
     private readonly almacenamiento: Almacenamiento,
     private readonly generador: GeneradorMaterialIA,
-    // La cola la hace otro integrante (ver logicaNoPersistente/ia/contratos.ts).
-    private readonly cola: ColaIA,
+    // La misma cola de toda la IA: el progreso sale por 'ia:progreso' y se cancela con 'ia:cancelar'.
+    private readonly cola: ColaEjecucion,
     private readonly guardarCasoUso: GuardarMaterialIA,
     private readonly listarCasoUso: ListarMaterialesIA,
   ) {}
-
-  alProgreso(escucha: (progreso: ProgresoIA) => void): void {
-    this.cola.alProgreso(escucha);
-  }
 
   // Genera la propuesta. No guarda nada.
   async generar(datos: GenerarMaterialIADTO): Promise<PropuestaIA> {
@@ -55,8 +51,13 @@ export class MaterialIA {
     if (!esFuenteIA(archivo.extension)) throw new Error('Solo se puede usar la IA con archivos PDF y DOCX.');
 
     const ruta = this.almacenamiento.rutaCompleta(archivo.rutaFisica);
-    const { contenido, proveedores } = await this.cola.encolar(datos.trabajoId, (ctx) =>
-      this.generador.generar({ ruta, extension: archivo.extension, nombre: archivo.nombre }, datos.tipo, ctx),
+    const { contenido, proveedores } = await this.cola.add(datos.trabajoId, (ctx) =>
+      this.generador.generar(
+        { ruta, extension: archivo.extension, nombre: archivo.nombre },
+        datos.tipo,
+        ctx,
+        datos.preferencias,
+      ),
     );
 
     this.pendientes.set(datos.trabajoId, { idUsuario, idArchivo: archivo.id, tipo: datos.tipo, proveedores });
@@ -68,14 +69,6 @@ export class MaterialIA {
       contenido,
       proveedores,
     };
-  }
-
-  cancelar(datos: TrabajoIADTO): boolean {
-    return this.cola.cancelar(datos.trabajoId);
-  }
-
-  cancelarTodo(): void {
-    this.cola.cancelarTodo();
   }
 
   descartar(datos: TrabajoIADTO): boolean {

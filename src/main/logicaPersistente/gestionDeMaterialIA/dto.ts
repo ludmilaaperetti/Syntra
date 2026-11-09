@@ -6,11 +6,13 @@ export const generarMaterialIASchema = z.object({
   trabajoId: z.uuid({ error: 'Identificador de trabajo inválido.' }),
   idArchivo: z.number().int().positive(),
   tipo: z.enum(TIPOS_MATERIAL_IA, { error: 'Tipo de material inválido.' }),
+  // Indicaciones del usuario para la IA ("nivel parcial", "más corto"...). Opcional.
+  preferencias: z.string().trim().max(2000, { error: 'Las indicaciones no pueden superar los 2000 caracteres.' }).optional(),
 });
 
 export type GenerarMaterialIADTO = z.infer<typeof generarMaterialIASchema>;
 
-// Cancelar un trabajo en curso o descartar una propuesta sin guardarla.
+// Descartar una propuesta sin guardarla. (Cancelar usa 'ia:cancelar', el de toda la IA.)
 export const trabajoIASchema = z.object({
   trabajoId: z.uuid({ error: 'Identificador de trabajo inválido.' }),
 });
