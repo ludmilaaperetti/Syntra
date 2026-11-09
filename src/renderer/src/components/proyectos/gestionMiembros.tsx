@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { InvitacionPendiente, Miembro } from '../../types/proyectos';
 import { puede, rolDe } from '../../permisos';
+import { usarAvisos } from '../../hooks/usarAvisos';
+import { leerPaleta } from '../../hooks/usarModo';
+import { buscarPaleta } from '../../styles/temas/paletas';
 
 type RolEditable = 'editor' | 'lector';
 
@@ -54,6 +57,7 @@ function IconoUsuarios() {
 }
 
 export function GestionMiembros({ idProyecto, idUsuarioActual, miembros, onCambio, onAbandono }: Props) {
+    const { confirmar } = usarAvisos();
     const [abierto, setAbierto] = useState(false);
     const [mail, setMail] = useState('');
     const [rolNuevo, setRolNuevo] = useState<RolEditable>('editor');
@@ -135,9 +139,18 @@ export function GestionMiembros({ idProyecto, idUsuarioActual, miembros, onCambi
     const invitar = () => {
         const limpio = mail.trim();
         if (!limpio) return setError('Ingresá el mail del integrante.');
+        const colores = buscarPaleta(leerPaleta()).modos.claro;
         void ejecutar(
             () => window.api.agregarMiembroPorMail({
                 idProyecto, idUsuarioSolicitante: idUsuarioActual, mail: limpio, rol: rolNuevo,
+                coloresCorreo: {
+                    primario: colores.primary,
+                    fondo: colores.background,
+                    superficie: colores.surface,
+                    borde: colores.border,
+                    texto: colores.textPrimary,
+                    suave: colores.frostClaro,
+                },
             }),
             () => {
                 setMail('');
@@ -158,10 +171,14 @@ export function GestionMiembros({ idProyecto, idUsuarioActual, miembros, onCambi
         }));
 
     // CAMBIO: manda mail siempre e id solo si existe.
-    const quitar = (m: Miembro) => {
+    const quitar = async (m: Miembro) => {
         const propio = m.idUsuario === idUsuarioActual;
         const texto = propio ? '¿Abandonar el proyecto?' : `¿Quitar a ${nombreDe(m)} del proyecto?`;
-        if (!window.confirm(texto)) return;
+        if (!await confirmar(texto, {
+            titulo: propio ? 'Abandonar proyecto' : 'Quitar integrante',
+            textoConfirmar: propio ? 'Abandonar' : 'Quitar',
+            peligro: true,
+        })) return;
         void ejecutar(
             () => window.api.quitarMiembro({
                 idProyecto,
