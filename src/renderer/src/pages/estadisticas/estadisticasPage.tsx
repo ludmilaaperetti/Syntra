@@ -7,7 +7,7 @@ import { CartelError } from "../../components/comunes/cartelError";
 import { mesDe, type Meta } from "../../types/metas";
 import type { Evento } from "../../types/eventos";
 import type { HorarioCursado } from "../../types/horarios";
-import type { AporteIntegrante, ResumenMaterial, ResumenProyecto, ResumenSesiones } from "../../types/estadisticas";
+import type { AporteIntegrante, ResumenProyecto, ResumenSesiones } from "../../types/estadisticas";
 import "../../styles/estadisticas.css";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -42,18 +42,6 @@ function textoMinutos(minutos: number): string {
   return resto ? `${horas} h ${resto} min` : `${horas} h`;
 }
 
-// 185000000 -> "176,4 MB"
-function textoBytes(bytes: number): string {
-  const unidades = ["B", "KB", "MB", "GB"];
-  let valor = bytes;
-  let i = 0;
-  while (valor >= 1024 && i < unidades.length - 1) {
-    valor /= 1024;
-    i++;
-  }
-  return `${valor.toLocaleString("es-AR", { maximumFractionDigits: i === 0 ? 0 : 1 })} ${unidades[i]}`;
-}
-
 // Una fila de barra horizontal: nombre, barra proporcional al máximo y el valor.
 interface FilaBarra {
   clave: string;
@@ -62,11 +50,10 @@ interface FilaBarra {
   texto: string;
 }
 
-// Reportes del usuario: material, metas, eventos, clases, sesiones de estudio y proyectos.
+// Reportes del usuario: metas, eventos, clases, sesiones de estudio y proyectos.
 export function EstadisticasPage() {
   const usuarioId = obtenerUsuarioId();
   const [hoy] = useState(() => new Date());
-  const [material, setMaterial] = useState<ResumenMaterial | null>(null);
   const [metas, setMetas] = useState<Meta[] | null>(null);
   const [eventos, setEventos] = useState<Evento[] | null>(null);
   const [horarios, setHorarios] = useState<HorarioCursado[] | null>(null);
@@ -82,7 +69,6 @@ export function EstadisticasPage() {
     const fallo = (e: unknown) => setError(mensajeDe(e));
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
-    window.api.resumenMaterial({ idUsuario: usuarioId }).then(setMaterial).catch(fallo);
     window.api.listarMetas({ idUsuario: usuarioId, mes: mesActual }).then(setMetas).catch(fallo);
     window.api.listarEventos({ usuarioId, desde: inicioMes.toISOString(), hasta: finMes.toISOString() }).then(setEventos).catch(fallo);
     window.api.listarHorarios({ usuarioId }).then(setHorarios).catch(fallo);
@@ -121,11 +107,6 @@ export function EstadisticasPage() {
         {error && <CartelError mensaje={error} onCerrar={() => setError("")} />}
 
         <div className="estadisticas__kpis">
-          <Kpi
-            valor={material ? String(material.archivos) : "—"}
-            etiqueta="archivos"
-            detalle={material ? `${textoBytes(material.bytes)} en ${material.carpetas} ${material.carpetas === 1 ? "carpeta" : "carpetas"}` : "Cargando…"}
-          />
           <Kpi
             valor={metas?.length ? `${porcentaje(cumplidas, metas.length)}%` : "—"}
             etiqueta="metas cumplidas"

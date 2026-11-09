@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Flag } from "lucide-react";
 import type { Evento } from "../../types/eventos";
 import type { Miembro, Proyecto } from "../../types/proyectos";
 import type { ColorMiembro, Tarea } from "../../types/tareas";
 import { armarColumnas, COLOR_SIN_ASIGNAR, iniciales, primerNombre } from "../../utils/tablero";
 import { fechaISO, inicioDeSemana, sumarDias } from "../../utils/cronograma";
+import { asegurarUsuarioIdGlobal } from "../../../lib/sesion";
 
 const SEMANAS = 4;
 const DIAS = SEMANAS * 7;
@@ -17,7 +18,7 @@ interface DatosProyecto {
   miembros: Miembro[];
   tareas: Tarea[];
   // Color de cada integrante, el mismo que en la División de tareas.
-  colores: Map<number, ColorMiembro>;
+  colores: Map<string, ColorMiembro>;
 }
 
 interface Props {
@@ -39,7 +40,9 @@ const diasEntre = (desde: Date, hasta: Date) => Math.round((hasta.getTime() - de
 
 // Una tarea va desde que empieza (o desde que se creó) hasta su fecha límite.
 function rangoTarea(tarea: Tarea): { desde: string; hasta: string } {
-  const desde = tarea.fechaInicio ?? fechaISO(new Date(tarea.fechaCreacion));
+  const creada = fechaISO(new Date(tarea.fechaCreacion));
+  // Si se creó después de su fecha límite (y no tiene inicio), la barra arranca en la fecha límite.
+  const desde = tarea.fechaInicio ?? (tarea.fechaLimite && tarea.fechaLimite < creada ? tarea.fechaLimite : creada);
   const hasta = tarea.fechaLimite && tarea.fechaLimite >= desde ? tarea.fechaLimite : desde;
   return { desde, hasta };
 }
@@ -49,7 +52,7 @@ export function CronogramaProyectos({ idUsuario, eventos }: Props) {
   const navigate = useNavigate();
   const [datos, setDatos] = useState<DatosProyecto[] | null>(null);
   const [elegido, setElegido] = useState<number | "todos">("todos");
-  const [resaltado, setResaltado] = useState<number | null>(null);
+  const [resaltado, setResaltado] = useState<string | null>(null);
   const [inicio, setInicio] = useState(() => sumarDias(inicioDeSemana(new Date()), -7));
   const [error, setError] = useState("");
 
@@ -57,6 +60,7 @@ export function CronogramaProyectos({ idUsuario, eventos }: Props) {
     let activo = true;
     (async () => {
       try {
+        const idGlobal = await asegurarUsuarioIdGlobal();
         const proyectos = await window.api.listarProyectos({ idUsuario });
         const cargados = await Promise.all(
           proyectos.map(async (proyecto) => {
@@ -64,7 +68,7 @@ export function CronogramaProyectos({ idUsuario, eventos }: Props) {
               window.api.listarMiembros({ idProyecto: proyecto.idProyecto, idUsuarioSolicitante: idUsuario }),
               window.api.listarTareas({ idProyecto: proyecto.idProyecto, idUsuario }),
             ]);
-            const colores = new Map(armarColumnas(miembros, idUsuario).map((c) => [c.idUsuario, c.color]));
+            const colores = new Map(armarColumnas(miembros, idGlobal).map((c) => [c.idGlobal, c.color]));
             return { proyecto, miembros, tareas, colores };
           })
         );
@@ -92,12 +96,12 @@ export function CronogramaProyectos({ idUsuario, eventos }: Props) {
   const columnaHoy = diasEntre(inicio, aFecha(hoy));
 
   // Integrantes de los proyectos que se ven, con su color (si está en varios, el del primero).
-  const integrantes = new Map<number, { nombre: string; color: ColorMiembro }>();
+  const integrantes = new Map<string, { nombre: string; color: ColorMiembro }>();
   for (const d of visibles) {
     for (const m of d.miembros) {
-      if (m.idUsuario === null || integrantes.has(m.idUsuario)) continue;
-      const color = d.colores.get(m.idUsuario);
-      if (color) integrantes.set(m.idUsuario, { nombre: m.nombre, color });
+      if (m.idGlobalUsuario === null || integrantes.has(m.idGlobalUsuario)) continue;
+      const color = d.colores.get(m.idGlobalUsuario);
+      if (color) integrantes.set(m.idGlobalUsuario, { nombre: m.nombre, color });
     }
   }
 
@@ -106,7 +110,7 @@ export function CronogramaProyectos({ idUsuario, eventos }: Props) {
     .flatMap((d) =>
       d.tareas.map((tarea) => {
         const rango = rangoTarea(tarea);
-        const asignado = tarea.idAsignadoGlobal === null ? null : d.miembros.find((m) => m.idUsuario === tarea.idAsignadoGlobal);
+        const asignado = tarea.idAsignadoGlobal === null ? null : d.miembros.find((m) => m.idGlobalUsuario === tarea.idAsignadoGlobal);
         const color = (tarea.idAsignadoGlobal !== null && d.colores.get(tarea.idAsignadoGlobal)) || SIN_ASIGNAR;
         return { tarea, proyecto: d.proyecto, rango, asignado, color };
       })
@@ -226,7 +230,7 @@ export function CronogramaProyectos({ idUsuario, eventos }: Props) {
                     <span className="gantt__tarea-texto">
                       <span className="gantt__tarea-titulo">{tarea.titulo}</span>
                       <span className="gantt__tarea-detalle">
-                        {etiqueta} · {textoCorto(rango.desde)}{rango.hasta !== rango.desde ? ` → ${textoCorto(rango.hasta)}` : ""}
+                        {etiqueta} · {tarea.fechaLimite ? `vence ${textoCorto(tarea.fechaLimite)}` : "sin fecha límite"}
                         {elegido === "todos" ? ` · ${proyecto.nombre}` : ""}
                       </span>
                     </span>
@@ -238,10 +242,11 @@ export function CronogramaProyectos({ idUsuario, eventos }: Props) {
                       background: color.fondo,
                       color: color.texto,
                     }}
-                    title={`${tarea.titulo}: ${nombre}, ${textoCorto(rango.desde)} → ${textoCorto(rango.hasta)}`}
+                    title={`${tarea.titulo}: ${nombre}, ${textoCorto(rango.desde)} → ${tarea.fechaLimite ? `vence ${textoCorto(tarea.fechaLimite)}` : "sin fecha límite"}`}
                   >
                     {tarea.completada && <Check size={12} aria-hidden="true" />}
                     {etiqueta}
+                    {tarea.fechaLimite && <Flag size={12} className="gantt__limite" aria-label={`Vence ${textoCorto(tarea.fechaLimite)}`} />}
                   </span>
                 </div>
               );
@@ -269,7 +274,7 @@ export function CronogramaProyectos({ idUsuario, eventos }: Props) {
 
       <p className="gantt__nota">
         Cada integrante tiene el mismo color que en la División de tareas. Las barras van desde que empieza la tarea
-        (o desde que se creó) hasta su fecha límite. La línea es hoy.
+        (o desde que se creó) hasta su fecha límite, marcada con la bandera. La línea es hoy.
       </p>
     </div>
   );

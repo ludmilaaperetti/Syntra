@@ -501,6 +501,11 @@
   white-space: nowrap;
 }
 
+.gantt__limite {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
 .gantt__bloque--hecha {
   opacity: 0.55;
 }
