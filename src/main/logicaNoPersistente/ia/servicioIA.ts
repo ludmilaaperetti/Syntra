@@ -1,4 +1,4 @@
-// src/main/logicaNoPersistente/gestionDeIa/ServicioIA.ts
+// src/main/logicaNoPersistente/ia/ServicioIA.ts
 // Casos de uso de la IA. El IPC solo valida y llama acá (igual que eventos.ipc.ts con la clase Eventos).
 import { ErrorClaves, type AlmacenClaves } from '../../servicios/ia/almacenClaves.js';
 import type { EventoOllama, GestorOllama } from '../../servicios/ia/gestorOllama.js';

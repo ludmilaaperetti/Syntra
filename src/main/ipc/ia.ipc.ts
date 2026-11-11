@@ -9,6 +9,7 @@ import {
   proveedorOnlineSchema,
 } from '../logicaNoPersistente/ia/dto.js';
 import type { ServicioIA } from '../logicaNoPersistente/ia/servicioIA.js';
+<<<<<<< HEAD
 import { z } from 'zod';
 import { ErrorClaves } from '../servicios/proveedores/almacenClaves.js';
 import { mapearConProgreso } from '../logicaNoPersistente/ia/colaEjecucion';
@@ -36,6 +37,8 @@ const fallo = (causa: string, e: unknown): Resp<never> => ({
   causa,
   mensaje: e instanceof Error ? e.message : String(e),
 });
+=======
+>>>>>>> 0d625b4 (instalacion ollama funcionando)
 
 export function registrarIpcIA(servicio: ServicioIA): void {
   // Generar y cancelar

@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 // src/main/logicaNoPersistente/ia/colaEjecucion.ts
 import { ErrorAbortado } from './errores';
+=======
+// src/main/logicaNoPersistente/ia/ColaEjecucion.ts
+import { ErrorAbortado } from './errores.js';
+>>>>>>> 0d625b4 (instalacion ollama funcionando)
 
 export interface ContextoTarea {
   signal: AbortSignal;

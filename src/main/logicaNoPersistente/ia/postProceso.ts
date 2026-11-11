@@ -1,4 +1,4 @@
-// src/main/logicaNoPersistente/gestionDeIa/postproceso.ts
+// src/main/logicaNoPersistente/ia/postproceso.ts
 // El material se procesa en FRAGMENTOS: cada fragmento da un resultado. Acá se unen en uno solo
 // y se descarta lo que no pasa las validaciones de contenido (la fuente debe estar en el material).
 import {

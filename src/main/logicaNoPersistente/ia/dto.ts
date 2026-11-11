@@ -1,4 +1,4 @@
-// src/main/logicaNoPersistente/gestionDeIa/dto.ts
+// src/main/logicaNoPersistente/ia/dto.ts
 // Contrato de la IA hacia afuera: esquemas zod de lo que llega del renderer (DESCONFIABLE, se valida igual que la
 // salida del modelo) y los tipos de lo que se le devuelve. El IPC valida con estos esquemas; el preload usa los tipos.
 import { z } from 'zod';

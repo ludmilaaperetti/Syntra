@@ -1,4 +1,4 @@
-// src/main/logicaNoPersistente/gestionDeIa/RouterModelos.ts
+// src/main/logicaNoPersistente/ia/RouterModelos.ts
 import { ErrorAbortado, ErrorProveedor, ErrorRouter, clasificar } from './errores.js';
 import type { Causa } from './errores.js';
 import type { PedidoGeneracion, ProveedorModelo, ResultadoGeneracion, Tarea } from './tipos.js';

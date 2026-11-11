@@ -1,7 +1,10 @@
 // src/main/logicaNoPersistente/ia/tipos.ts
+<<<<<<< HEAD
 // Tipos de todo el módulo de IA (no importa nada de otros archivos).
 
 // ---------- Tareas ----------
+=======
+>>>>>>> 0d625b4 (instalacion ollama funcionando)
 
 export const TAREAS = [
   'resumen',
