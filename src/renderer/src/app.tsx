@@ -31,6 +31,7 @@ import { SesionEstudioPage } from "./pages/sesionesEstudio/sesionEstudioPage";
 import { ProveedorAvisos } from "./hooks/usarAvisos";
 import { ProveedorSpotify } from "./hooks/usarSpotify";
 import { EcoTeclado } from "./voz/ecoTeclado";
+import { AnunciarPantalla } from "./voz/anunciarPantalla";
 
 
 export default function App() {
@@ -78,6 +79,7 @@ export default function App() {
       </Routes>
       <PanelPerfil />
       <Anunciador />
+      <AnunciarPantalla />
       <EcoTeclado activo />
     </ProveedorSpotify>
     </ProveedorAvisos>
