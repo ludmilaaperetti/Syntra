@@ -1,7 +1,6 @@
 // src/main/ipc/ia.ipc.ts
 import { ipcMain } from 'electron';
 import {
-  fallo,
   generarSchema,
   guardarClaveSchema,
   idTrabajoSchema,
@@ -9,25 +8,8 @@ import {
   proveedorOnlineSchema,
 } from '../logicaNoPersistente/ia/dto.js';
 import type { ServicioIA } from '../logicaNoPersistente/ia/servicioIA.js';
-<<<<<<< HEAD
 import { z } from 'zod';
-import { ErrorClaves } from '../servicios/proveedores/almacenClaves.js';
-import { mapearConProgreso } from '../logicaNoPersistente/ia/colaEjecucion';
-import { ErrorRouter, esAbort } from '../logicaNoPersistente/ia/errores';
-import { fragmentarEnTextos } from '../logicaNoPersistente/ia/fragmentador';
-import { armarUsuario } from '../logicaNoPersistente/ia/prompts';
-import { NOMBRES_TAREAS, TAREAS_IA, type DefTarea } from '../logicaNoPersistente/ia/tareas';
-import type { ServiciosIA } from '../logicaNoPersistente/ia';
-
-// Todo lo que llega del renderer es DESCONFIABLE: se valida igual que la salida del modelo.
-const PedidoGenerar = z.object({
-  idTrabajo: z.string().uuid(),
-  tarea: z.enum(NOMBRES_TAREAS),
-  texto: z.string().min(1).max(2_000_000), // ya extraído (mammoth / pdf) y validado antes
-  preferencias: z.string().max(2000).optional(),
-});
-const ProveedorOnline = z.enum(['luna', 'gemini']);
-const ProveedorCualquiera = z.enum(['luna', 'gemini', 'gemma']);
+import { NOMBRES_TAREAS } from '../logicaNoPersistente/ia/tipos.js';
 
 /** Los Error NO viajan bien por IPC (se pierden propiedades): siempre devolvemos un objeto simple. */
 type Resp<T> = { ok: true; dato: T } | { ok: false; causa: string; mensaje: string };
@@ -37,8 +19,6 @@ const fallo = (causa: string, e: unknown): Resp<never> => ({
   causa,
   mensaje: e instanceof Error ? e.message : String(e),
 });
-=======
->>>>>>> 0d625b4 (instalacion ollama funcionando)
 
 export function registrarIpcIA(servicio: ServicioIA): void {
   // Generar y cancelar
