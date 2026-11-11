@@ -7,8 +7,6 @@ import { is } from '@electron-toolkit/utils';
 import { pool, verifyDbConnection } from './persistencia/baseDeDatos';
 import { Persistencia } from './persistencia/persistencia';
 
-import { type ServiciosIA } from './logicaNoPersistente/ia/index.js';
-
 // ---------------------------------------------------------------------------
 // userData por instancia: DEBE hacerse antes de cualquier otra cosa que use
 // app.getPath('userData') (id-cliente-sync.txt, sync-secretos.json, etc.).
@@ -267,7 +265,7 @@ import { ClienteSpotify } from './logicaNoPersistente/spotify/clienteSpotify';
 import { registerSpotifyIpc } from './ipc/spotify.ipc';
 
 // Inteligencia artificial (router, proveedores, claves y cola) y Material con IA
-import { crearServiciosIA } from './logicaNoPersistente/ia';
+import { crearServiciosIA, type ServiciosIA } from './logicaNoPersistente/ia/index.js';
 import { registrarIpcIA } from './ipc/ia.ipc';
 import { GeneradorMaterialIA } from './logicaNoPersistente/ia/generadorMaterialIA';
 import { GuardarMaterialIA } from './logicaPersistente/gestionDeMaterialIA/guardarMaterialIA';
@@ -673,10 +671,13 @@ function wireDependencies(): ProcesoSesionEstudio {
     new AutenticacionSpotify(configSpotify, (url) => shell.openExternal(url))
   );
   registerSpotifyIpc(clienteSpotify);
-  // Inteligencia artificial: router (Luna → Gemini → Gemma), claves y una sola cola para todo.
+  // Inteligencia artificial: router (Luna → Gemini → Gemma), claves, Ollama y una sola cola para todo.
+  // Se crea UNA sola vez: registrarIpcIA no puede llamarse dos veces (ipcMain.handle falla con el mismo canal).
   const ia = crearServiciosIA({
     alProgreso: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:progreso', e)),
+    alOllama: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:ollama', e)),
   });
+  iaServicios = ia;
   registrarIpcIA(ia);
 
   // Material con IA: la IA propone, el usuario revisa en la pantalla previa y recién ahí se guarda.
@@ -764,13 +765,6 @@ app.whenReady().then(async () => {
   // Los handlers IPC se registran antes de crear la ventana.
   procesoSesion = wireDependencies();
 
-  // IA: router de modelos, claves, cola y Ollama. Va acá (con la app ya lista), no al importar el archivo.
-  iaServicios = crearServiciosIA({
-    alProgreso: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:progreso', e)),
-    alOllama: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:ollama', e)),
-  });
-  registrarIpcIA(iaServicios);
-
   const recordatorios = new EnviarRecordatoriosPendientes(new Persistencia(pool));
   let recordatoriosEnCurso = false;
   const enviarRecordatorios = async (): Promise<void> => {
@@ -799,10 +793,6 @@ app.whenReady().then(async () => {
   app.quit();
 });
 
-const carpeta = process.env.SYNTRA_DATA_DIR;           // ej: ./electron-data-1
-if (carpeta) app.setPath('userData', carpeta);
-
-
 app.on('window-all-closed', () => {
   // El pool se cierra en before-quit, después de liberar los bloqueos de edición.
   procesoSesion?.detener();
@@ -815,8 +805,9 @@ app.on('before-quit', (event) => {
   event.preventDefault();
   cerrando = true;
 
-  // Apaga Ollama solo si lo inició la app (si ya estaba corriendo, no lo toca).
-  //iaServicios?.gestorOllama.detener();
+  // Corta lo que la IA tenga en curso y apaga el Ollama que inició la app (si ya estaba corriendo, no lo toca).
+  cancelarIA?.();
+  iaServicios?.gestorOllama.detener();
 
   void (async () => {
     // Primero se frena el barrido de la sincronización: si no, sigue consultando la base ya cerrada.

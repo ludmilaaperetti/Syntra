@@ -1,3 +1,4 @@
+// src/main/logicaNoPersistente/ia/esquemas.ts
 import { z } from 'zod';
 import type { TipoMaterialIA } from '../tipos';
 import { resumenSchema, type Resumen } from './resumen';
@@ -10,7 +11,7 @@ export * from './mapaMental';
 export * from './flashcards';
 
 // Un esquema por tipo de Material con IA. El registro de TODAS las tareas de IA (con su prompt
-// y su JSON Schema) está en ../tareas.ts.
+// y su JSON Schema) está en ./tareas.ts.
 export const ESQUEMAS_IA = {
   resumen: resumenSchema,
   cuestionario: cuestionarioSchema,

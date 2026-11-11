@@ -2,9 +2,9 @@
 // Contrato de la IA hacia afuera: esquemas zod de lo que llega del renderer (DESCONFIABLE, se valida igual que la
 // salida del modelo) y los tipos de lo que se le devuelve. El IPC valida con estos esquemas; el preload usa los tipos.
 import { z } from 'zod';
-import { NOMBRES_TAREAS } from './tareasIA.js';
+import { NOMBRES_TAREAS } from './tareas.js';
 
-export type { TareaImplementada } from './tareasIA.js';
+export type { TareaImplementada } from './tareas.js';
 export type { EventoOllama } from '../../servicios/ia/gestorOllama.js';
 
 export const generarSchema = z.object({
