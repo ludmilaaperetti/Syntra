@@ -1,6 +1,6 @@
-// src/main/logicaNoPersistente/ia/proveedores/proveedorOllama.ts  (Gemma local)
-import { ErrorProveedor, clasificar } from '../../logicaNoPersistente/ia/errores';
-import type { PedidoCrudo, ProveedorModelo } from '../../logicaNoPersistente/ia/tipos';
+// src/main/servicios/ia/ProveedorOllama.ts  (Gemma local)
+import { ErrorProveedor, clasificar } from '../../logicaNoPersistente/ia/errores.js';
+import type { PedidoCrudo, ProveedorModelo } from '../../logicaNoPersistente/ia/tipos.js';
 
 export interface ConfigOllama {
   host?: string; // por defecto http://127.0.0.1:11434

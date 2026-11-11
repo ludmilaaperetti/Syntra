@@ -1,7 +1,7 @@
 // src/main/logicaNoPersistente/ia/proveedores/proveedorGemini.ts
 import { GoogleGenAI } from '@google/genai';
-import { ErrorProveedor, clasificar } from '../../logicaNoPersistente/ia/errores';
-import type { PedidoCrudo, ProveedorModelo } from '../../logicaNoPersistente/ia/tipos';
+import { ErrorProveedor, clasificar } from '../../logicaNoPersistente/ia/errores.js';
+import type { PedidoCrudo, ProveedorModelo } from '../../logicaNoPersistente/ia/tipos.js';
 
 export interface ConfigGemini {
   modelo: string; // el id vigente de un modelo Flash (ver ai.google.dev/gemini-api/docs/models)
