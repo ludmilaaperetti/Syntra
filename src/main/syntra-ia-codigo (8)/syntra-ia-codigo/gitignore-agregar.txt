@@ -1,0 +1,7 @@
+# Agregar a tu .gitignore
+.env
+.env.*
+!.env.example
+electron-data-1/
+electron-data-2/
+ia-claves.json

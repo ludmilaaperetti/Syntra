@@ -66,11 +66,14 @@ export class GestorOllama {
 
   /** Para llamar al arrancar SIN await: nunca lanza ni frena la app. */
   async preparar(): Promise<void> {
+    console.log("preparando instalación ollama");
     try {
       this.emitir({ tipo: 'iniciando' });
+  
       let arranque = await this.asegurarCorriendo();
       if (arranque === 'no_instalado' && this.o.instalar && this.o.autoInstalar) {
         const r = await this.instalarOllama();
+        console.log("instalador ollama terminó");
         if (!r.ok) return; // instalarOllama ya avisó (error o cancelado)
         arranque = await this.asegurarCorriendo();
       }
@@ -84,6 +87,7 @@ export class GestorOllama {
       }
       this.emitir({ tipo: 'falta_modelo' });
     } catch (e) {
+      console.log('[ollama]', JSON.stringify(e));
       this.emitir({ tipo: 'error', mensaje: e instanceof Error ? e.message : String(e) });
     }
   }
@@ -153,6 +157,7 @@ export class GestorOllama {
       await this.o.instalar((p) => {
         const porcentaje = p.fase === 'descargando' ? p.porcentaje : null;
         const clave = `${p.fase}:${porcentaje}`;
+        console.log(clave);
         if (clave === ultimaClave) return; // no se repite el mismo aviso
         ultimaClave = clave;
         this.emitir({ tipo: 'instalando', fase: p.fase, porcentaje });

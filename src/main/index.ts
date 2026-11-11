@@ -7,6 +7,8 @@ import { is } from '@electron-toolkit/utils';
 import { pool, verifyDbConnection } from './persistencia/baseDeDatos';
 import { Persistencia } from './persistencia/persistencia';
 
+import { type ServiciosIA } from './logicaNoPersistente/ia/index.js';
+
 // ---------------------------------------------------------------------------
 // userData por instancia: DEBE hacerse antes de cualquier otra cosa que use
 // app.getPath('userData') (id-cliente-sync.txt, sync-secretos.json, etc.).
@@ -275,8 +277,7 @@ import { registerMaterialIAIpc } from './ipc/materialIA.ipc';
 
 let mainWindow: BrowserWindow | null = null;
 let procesoSesion: ProcesoSesionEstudio | null = null;
-
-// Servicios de IA (se crean dentro de whenReady, cuando Electron ya está listo).
+// Servicios de IA (router, claves, cola y Ollama). Se guardan para apagar Ollama al cerrar la app.
 let iaServicios: ServiciosIA | null = null;
 
 // Se guardan mientras están en pantalla: si no, Windows puede perder el clic.
@@ -763,12 +764,11 @@ app.whenReady().then(async () => {
   // Los handlers IPC se registran antes de crear la ventana.
   procesoSesion = wireDependencies();
 
-  // IA: se crea acá (no al importar el archivo) porque necesita app/safeStorage ya listos.
-  const servicios = crearServiciosIA({
+  // IA: router de modelos, claves, cola y Ollama. Va acá (con la app ya lista), no al importar el archivo.
+  iaServicios = crearServiciosIA({
     alProgreso: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:progreso', e)),
     alOllama: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:ollama', e)),
   });
-  iaServicios = servicios;
   registrarIpcIA(iaServicios);
 
   const recordatorios = new EnviarRecordatoriosPendientes(new Persistencia(pool));
@@ -787,8 +787,8 @@ app.whenReady().then(async () => {
   void enviarRecordatorios();
   setInterval(() => void enviarRecordatorios(), 15 * 60 * 1000);
   createWindow();
-  // Inicia Ollama (si está instalado) y revisa el modelo. Sin await: no frena el arranque.
-  void servicios.gestorOllama.preparar();
+  // Inicia Ollama si está apagado y revisa el modelo. Sin await: no frena el arranque de la app.
+  void iaServicios?.gestorOllama.preparar();
   await procesoSesion.arrancar();
 
   app.on('activate', () => {
@@ -815,15 +815,10 @@ app.on('before-quit', (event) => {
   event.preventDefault();
   cerrando = true;
 
-  cancelarIA?.();
+  // Apaga Ollama solo si lo inició la app (si ya estaba corriendo, no lo toca).
+  //iaServicios?.gestorOllama.detener();
 
   void (async () => {
-    // Apaga el Ollama que inició la app (si ya estaba corriendo antes, no lo toca).
-    try {
-      iaServicios?.gestorOllama.detener();
-    } catch (err) {
-      console.error('[shutdown] No se pudo detener Ollama:', err);
-    }
     // Primero se frena el barrido de la sincronización: si no, sigue consultando la base ya cerrada.
     try {
       await detenerSincronizacion?.();

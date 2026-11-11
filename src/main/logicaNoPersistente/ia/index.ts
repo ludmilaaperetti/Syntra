@@ -4,6 +4,8 @@ import { join } from 'node:path';
 import { AlmacenClaves } from '../../servicios/ia/almacenClaves.js';
 import { ProveedorGemini } from '../../servicios/ia/proveedorGemini.js';
 import { ProveedorLuna } from '../../servicios/ia/proveedorLuna.js';
+import { GestorOllama, normalizarHost, type EventoOllama } from '../../servicios/ia/gestorOllama.js';
+import { InstaladorOllama, URL_DESCARGA_OLLAMA, type ProgresoInstalacion } from '../../servicios/ia/instaladorOllama.js';
 import { ProveedorOllama } from '../../servicios/ia/proveedorOllama.js';
 import { ColaEjecucion, type EventoProgreso } from './colaEjecucion.js';
 import { RouterModelos } from './routerModelos.js';
@@ -31,15 +33,26 @@ export function crearServiciosIA(opciones: OpcionesServiciosIA = {}) {
 
   // OLLAMA_HOST suele escribirse sin "http://": se normaliza para no romper el fetch
   const hostOllama = normalizarHost(process.env.OLLAMA_HOST);
-  const modeloOllama = process.env.OLLAMA_MODELO ?? 'COMPLETAR-con-ollama-list';
+  const modeloOllama = process.env.OLLAMA_MODELO ?? 'gemma4:e2b'; // por defecto el liviano; se puede cambiar en .env
   const ollama = new ProveedorOllama('gemma', { host: hostOllama, modelo: modeloOllama });
-  // Inicia Ollama y descarga el modelo si falta. OLLAMA_AUTO_DESCARGA=1 → sin preguntar (solo desarrollo)
+  // Instalador del paquete independiente de Ollama: queda en userData/ollama (sin administrador, sin tocar el PATH).
+  const instalador = new InstaladorOllama({ carpetaInstalacion: join(app.getPath('userData'), 'ollama') });
+  const instalar = (alProgreso: (p: ProgresoInstalacion) => void, senal: AbortSignal) =>
+    instalador.instalar(alProgreso, senal);
+
+  // Al abrir la app: instala Ollama si falta, lo inicia y DESCARGA el modelo si falta (~4,6 GB, una sola vez).
+  // Para desactivar la descarga del modelo: OLLAMA_AUTO_DESCARGA=0 en el .env (entonces avisa 'falta_modelo' y espera).
   const gestorOllama = new GestorOllama({
     host: hostOllama,
     modelo: modeloOllama,
     estado: () => ollama.estado(),
     alEvento: opciones.alOllama,
-    autoDescargar: process.env.OLLAMA_AUTO_DESCARGA === '1',
+    autoDescargar: process.env.OLLAMA_AUTO_DESCARGA !== '0',
+    urlDescarga: URL_DESCARGA_OLLAMA,
+    // El de la persona o el de la carpeta de la app; si no hay ninguno, 'ollama' da ENOENT y se dispara la instalación.
+    comando: () => instalador.rutaEjecutable() ?? 'ollama',
+    // Solo si hay paquete para este sistema. OLLAMA_AUTO_INSTALAR=0 lo desactiva.
+    ...(instalador.soportado ? { instalar, autoInstalar: process.env.OLLAMA_AUTO_INSTALAR !== '0' } : {}),
   });
 
   const proveedores = [

@@ -1,0 +1,99 @@
+// src/main/ipc/ia.ipc.ts
+import { ipcMain } from 'electron';
+import { z } from 'zod';
+import { ErrorClaves } from '../servicios/ia/AlmacenClaves.js';
+import { mapearConProgreso } from '../logicaNoPersistente/ia/ColaEjecucion.js';
+import { ErrorRouter, esAbort } from '../logicaNoPersistente/ia/errores.js';
+import { fragmentarSimple } from '../logicaNoPersistente/ia/fragmentar.js';
+import { armarUsuario } from '../logicaNoPersistente/ia/prompts.js';
+import { NOMBRES_TAREAS, TAREAS_IA, type DefTarea } from '../logicaNoPersistente/ia/tareasIA.js';
+import type { ServiciosIA } from '../logicaNoPersistente/ia/index.js';
+
+// Todo lo que llega del renderer es DESCONFIABLE: se valida igual que la salida del modelo.
+const PedidoGenerar = z.object({
+  idTrabajo: z.string().uuid(),
+  tarea: z.enum(NOMBRES_TAREAS),
+  texto: z.string().min(1).max(2_000_000), // ya extraído (mammoth / pdf) y validado antes
+  preferencias: z.string().max(2000).optional(),
+});
+const ProveedorOnline = z.enum(['luna', 'gemini']);
+const ProveedorCualquiera = z.enum(['luna', 'gemini', 'gemma']);
+
+/** Los Error NO viajan bien por IPC (se pierden propiedades): siempre devolvemos un objeto simple. */
+type Resp<T> = { ok: true; dato: T } | { ok: false; causa: string; mensaje: string };
+
+const fallo = (causa: string, e: unknown): Resp<never> => ({
+  ok: false,
+  causa,
+  mensaje: e instanceof Error ? e.message : String(e),
+});
+
+export function registrarIpcIA({ claves, router, cola, ollama, gestorOllama }: ServiciosIA): void {
+  ipcMain.handle('ia:generar', async (_evento, crudo: unknown): Promise<Resp<unknown>> => {
+    const parsed = PedidoGenerar.safeParse(crudo);
+    if (!parsed.success) return fallo('pedido_invalido', parsed.error);
+    const pedido = parsed.data;
+    const def: DefTarea = TAREAS_IA[pedido.tarea]; // anotar el tipo evita que TS infiera una unión de esquemas
+
+    try {
+      const partes = await cola.add(pedido.idTrabajo, async (ctx) => {
+        const fragmentos = fragmentarSimple(pedido.texto);
+        return mapearConProgreso(fragmentos, ctx, async (frag) => {
+          const r = await router.generar(pedido.tarea, {
+            sistema: def.sistema,
+            usuario: armarUsuario(frag, pedido.preferencias),
+            esquema: def.esquema,
+            esquemaJson: def.esquemaJson,
+            signal: ctx.signal,
+          });
+          return { dato: r.dato, proveedor: r.proveedor };
+        });
+      });
+      // Une los fragmentos en un solo resultado y descarta lo que no cumple las validaciones de contenido
+      let contenido: unknown;
+      try {
+        contenido = def.combinar(partes.map((x) => x.dato), pedido.texto);
+      } catch (e) {
+        return fallo('sin_contenido_valido', e);
+      }
+      return { ok: true, dato: { contenido, proveedores: [...new Set(partes.map((x) => x.proveedor))] } };
+    } catch (e) {
+      if (esAbort(e)) return { ok: false, causa: 'cancelado', mensaje: 'Cancelado' };
+      if (e instanceof ErrorRouter) return fallo('sin_proveedor', e);
+      return fallo('desconocido', e);
+    }
+  });
+
+  ipcMain.handle('ia:cancelar', (_e, id: unknown) => cola.cancelar(z.string().parse(id)));
+
+  // Claves: el renderer puede GUARDAR y consultar si existe. Nunca LEERLA completa.
+  ipcMain.handle('ia:guardarClave', (_e, proveedor: unknown, clave: unknown): Resp<true> => {
+    try {
+      claves.establecer(ProveedorOnline.parse(proveedor), z.string().min(8).max(300).parse(clave));
+      return { ok: true, dato: true };
+    } catch (e) {
+      return fallo(e instanceof ErrorClaves ? e.codigo : 'pedido_invalido', e);
+    }
+  });
+  ipcMain.handle('ia:tieneClave', (_e, proveedor: unknown) => claves.existe(ProveedorOnline.parse(proveedor)));
+  ipcMain.handle('ia:claveEnmascarada', (_e, proveedor: unknown) => claves.enmascarada(ProveedorOnline.parse(proveedor)));
+  ipcMain.handle('ia:borrarClave', (_e, proveedor: unknown) => {
+    claves.borrar(ProveedorOnline.parse(proveedor));
+    return true;
+  });
+
+  // Pantalla de Ajustes
+  ipcMain.handle('ia:probarConexion', (_e, proveedor: unknown) =>
+    router.probar(ProveedorCualquiera.parse(proveedor), AbortSignal.timeout(15_000)),
+  ); // → { ok: true, ms } ó { ok: false, ms, causa }
+  ipcMain.handle('ia:estadoOllama', () => ollama.estado()); // → { corriendo, modeloInstalado }
+
+  // Ollama: la pantalla puede mostrar el estado, pedir la descarga del modelo, cancelarla o reintentar
+  ipcMain.handle('ia:ollama:ultimo', () => gestorOllama.ultimo); // evento más reciente (por si la pantalla llegó tarde)
+  ipcMain.handle('ia:ollama:descargar', () => gestorOllama.descargarModelo()); // tarda: avisa por ia:ollama
+  ipcMain.handle('ia:ollama:cancelar', () => {
+    gestorOllama.cancelarDescarga();
+    return true;
+  });
+  ipcMain.handle('ia:ollama:reintentar', () => void gestorOllama.preparar());
+}

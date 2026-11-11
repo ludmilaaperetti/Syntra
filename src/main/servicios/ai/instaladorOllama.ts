@@ -72,6 +72,7 @@ export class InstaladorOllama {
 
   /** ¿Hay paquete independiente para esta compu? */
   get soportado(): boolean {
+    console.log("soportado:", this.paquetes() !== null);
     return this.paquetes() !== null;
   }
 
@@ -101,7 +102,9 @@ export class InstaladorOllama {
 
   /** Descarga y descomprime Ollama en la carpeta propia. Lanza Error con un mensaje legible si algo sale mal. */
   async instalar(alProgreso: (p: ProgresoInstalacion) => void, senal?: AbortSignal): Promise<void> {
+    console.log("empezando instalacion llama");
     const paquetes = this.paquetes();
+    console.log("paquetes");
     if (!paquetes) throw new Error('No hay un paquete independiente de Ollama para este sistema.');
     if (this.rutaEjecutable()) return; // ya hay uno (del usuario o nuestro)
 
