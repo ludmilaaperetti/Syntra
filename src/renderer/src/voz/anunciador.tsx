@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
-import { configurarLector, escucharAnuncios } from './narrador';
+import { escucharAnuncios } from './narrador';
 
 export function Anunciador() {
   const [texto, setTexto] = useState('');
-
-  useEffect(() => window.api.alCambiarLector(configurarLector), []);
 
   useEffect(
     () =>

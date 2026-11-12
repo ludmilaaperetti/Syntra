@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { hablar, hayLector } from './narrador';
+import { configurarLector, hablar, hayLector } from './narrador';
 
 type Campo = HTMLInputElement | HTMLTextAreaElement;
 
@@ -55,8 +55,13 @@ export function EcoTeclado({ activo }: { activo: boolean }) {
   useEffect(() => {
     if (!activo) return;
 
-    const alEnfocar = (e: FocusEvent) => {
-      if (!hayLector() && esCampoDeTexto(e.target)) leerCampo(e.target);
+    // Al entrar a un campo se vuelve a preguntar si hay lector:
+    // Windows a veces avisa tarde que NVDA está prendido y Syntra hablaba encima.
+    const alEnfocar = async (e: FocusEvent) => {
+      const campo = e.target;
+      if (!esCampoDeTexto(campo)) return;
+      configurarLector(await window.api.lectorPantallaActivo().catch(() => hayLector()));
+      if (!hayLector()) leerCampo(campo);
     };
 
     const alTeclear = (e: KeyboardEvent) => {

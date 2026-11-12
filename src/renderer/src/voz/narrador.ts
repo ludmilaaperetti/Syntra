@@ -15,9 +15,19 @@ function leerVelocidad(): number {
   }
 }
 
+// Voz de mujer (Laura) para que se distinga de NVDA, que usa voz de hombre.
+// Chromium carga las voces de a poco: al principio getVoices() viene vacío y se usaba la voz por defecto.
+let voces = speechSynthesis.getVoices();
+speechSynthesis.addEventListener('voiceschanged', () => {
+  voces = speechSynthesis.getVoices();
+});
+
 function vozEnEspanol(): SpeechSynthesisVoice | undefined {
-  const voces = speechSynthesis.getVoices();
-  return voces.find((v) => v.lang === 'es-AR') ?? voces.find((v) => v.lang.startsWith('es'));
+  return (
+    voces.find((v) => v.name.includes('Laura')) ??
+    voces.find((v) => v.lang === 'es-AR') ??
+    voces.find((v) => v.lang.startsWith('es'))
+  );
 }
 
 // NUEVO: el Anunciador llama a esto cuando main avisa si hay lector de pantalla.
@@ -25,21 +35,28 @@ export function configurarLector(activo: boolean): void {
   lectorActivo = activo;
 }
 
+// true cuando la persona durmió a NVDA para que la guíe la voz de Syntra.
+let vozPropia = false;
+
+export function usarVozPropia(si: boolean): void {
+  vozPropia = si;
+}
+
 export function hayLector(): boolean {
-  return lectorActivo;
+  return lectorActivo && !vozPropia;
 }
 
 let pendiente: ReturnType<typeof setTimeout> | undefined;
 let turno = 0;
 
-// Dice un texto en voz alta y lo manda a la región aria-live.
+// Dice un texto: con la voz de Syntra o, si hay lector de pantalla, por la región aria-live.
 // Corta lo que se estaba diciendo. alTerminar se llama solo si nadie la interrumpió.
 export function hablar(texto: string, alTerminar?: () => void): void {
   const miTurno = ++turno;
   clearTimeout(pendiente);
   speechSynthesis.cancel();
 
-  if (!lectorActivo) {
+  if (!hayLector()) {
     // Chromium a veces descarta una frase que se pide justo después de cancel()
     // o se queda trabado "hablando": se espera un instante y se lo destraba con resume().
     pendiente = setTimeout(() => {
@@ -52,8 +69,10 @@ export function hablar(texto: string, alTerminar?: () => void): void {
       speechSynthesis.resume();
       speechSynthesis.speak(frase);
     }, 50);
+    return;
   }
 
+  // Solo si hay lector: el texto va a la región aria-live y lo dice NVDA (nunca los dos a la vez).
   oyentes.forEach((oyente) => oyente(texto));
 }
 

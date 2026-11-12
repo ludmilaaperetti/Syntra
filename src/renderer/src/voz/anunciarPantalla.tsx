@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { hablar } from './narrador';
+import { darBienvenida, reiniciarBienvenida } from './bienvenida';
 
 const PANTALLAS: Record<string, string> = {
   '/': 'Inicio de sesión',
   '/registro': 'Registro',
-  '/dashboard': 'Bienvenida a Syntra. Estás en el inicio',
   '/material': 'Material de estudio',
   '/eventos': 'Calendario',
   '/horarios': 'Horarios',
@@ -29,6 +29,18 @@ export function AnunciarPantalla() {
   const { pathname } = useLocation();
 
   useEffect(() => {
+    // El foco pasa al contenido: si no, queda en la barra lateral y con Tab nunca se llega a la pantalla.
+    const contenido = document.querySelector<HTMLElement>('main');
+    if (contenido) {
+      contenido.tabIndex = -1;
+      contenido.focus({ preventScroll: true });
+    }
+
+    if (pathname === '/') reiniciarBienvenida();
+    if (pathname === '/dashboard') {
+      darBienvenida();
+      return;
+    }
     const nombre = nombreDePantalla(pathname);
     if (nombre) hablar(nombre);
   }, [pathname]);

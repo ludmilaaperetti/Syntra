@@ -32,6 +32,7 @@ import { ProveedorAvisos } from "./hooks/usarAvisos";
 import { ProveedorSpotify } from "./hooks/usarSpotify";
 import { EcoTeclado } from "./voz/ecoTeclado";
 import { AnunciarPantalla } from "./voz/anunciarPantalla";
+import { LectorFoco } from "./voz/lectorFoco";
 
 
 export default function App() {
@@ -81,6 +82,7 @@ export default function App() {
       <Anunciador />
       <AnunciarPantalla />
       <EcoTeclado activo />
+      <LectorFoco />
     </ProveedorSpotify>
     </ProveedorAvisos>
   );

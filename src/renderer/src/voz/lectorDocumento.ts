@@ -46,11 +46,33 @@ export function seguirLectura(): void {
   if (!leyendo && indice < bloques.length) leerActual();
 }
 
-export function siguienteTitulo(): void {
-  const proximo = bloques.findIndex((b, i) => i > indice && b.esTitulo);
-  if (proximo === -1) return hablar('No hay más títulos.');
-  indice = proximo;
+// Busca el primer título desde una posición, hacia adelante (1) o hacia atrás (-1).
+function tituloDesde(desde: number, sentido: 1 | -1): number {
+  for (let i = desde; i >= 0 && i < bloques.length; i += sentido) {
+    if (bloques[i].esTitulo) return i;
+  }
+  return -1;
+}
+
+// Salta al título siguiente o anterior (en un PDF, cada página es un título) y sigue leyendo.
+// Si no hay a dónde saltar, lo avisa y retoma el bloque en el que estaba.
+function saltarTitulo(sentido: 1 | -1): void {
+  const destino =
+    sentido === 1 ? tituloDesde(indice + 1, 1) : tituloDesde(tituloDesde(indice, -1) - 1, -1);
+  if (destino === -1) {
+    hablar(sentido === 1 ? 'No hay más páginas.' : 'Es la primera página.', leerActual);
+    return;
+  }
+  indice = destino;
   leerActual();
+}
+
+export function siguienteTitulo(): void {
+  saltarTitulo(1);
+}
+
+export function anteriorTitulo(): void {
+  saltarTitulo(-1);
 }
 
 export function detenerLectura(): void {
