@@ -183,6 +183,9 @@ declare global {
       resolverConflicto: (datos: unknown) => Promise<Resultado<{ version: number }>>;
       iniciarSincronizacion: (datos: { idUsuario: number; password?: string }) => Promise<Resultado<void>>;
       alEventoSincronizacion: (cb: (evento: unknown) => void) => () => void;
+      // Modo voz
+      lectorPantallaActivo: () => Promise<boolean>;
+      alCambiarLector: (escuchar: (activo: boolean) => void) => () => void;
     };
   }
 }
