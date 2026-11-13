@@ -1,4 +1,6 @@
 import 'dotenv/config';
+// Tiene que ir antes que baseDeDatos: deja armada la conexión a la base propia de Syntra.
+import { iniciarBaseEmbebida, detenerBaseEmbebida } from './persistencia/baseEmbebida';
 import { app, BrowserWindow, dialog, net, Notification, protocol, shell } from 'electron';
 import { isAbsolute, join, relative, resolve } from 'path';
 import { pathToFileURL } from 'url';
@@ -714,6 +716,7 @@ app.whenReady().then(async () => {
   });
 
   try {
+    await iniciarBaseEmbebida();
     await verifyDbConnection();
   } catch (error) {
     console.error('[startup] No se pudo preparar la base de datos:', error);
@@ -781,6 +784,11 @@ app.on('before-quit', (event) => {
       await pool.end();
     } catch (err) {
       console.error('[shutdown] Error al cerrar el pool:', err);
+    }
+    try {
+      await detenerBaseEmbebida();
+    } catch (err) {
+      console.error('[shutdown] No se pudo apagar la base:', err);
     }
     app.quit();
   })();
