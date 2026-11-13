@@ -30,6 +30,7 @@ import { CrearSesionEstudioPage } from "./pages/sesionesEstudio/crearSesionEstud
 import { SesionEstudioPage } from "./pages/sesionesEstudio/sesionEstudioPage";
 import { ProveedorAvisos } from "./hooks/usarAvisos";
 import { ProveedorSpotify } from "./hooks/usarSpotify";
+import { ModalBienvenidaVoz } from "./components/comunes/modalBienvenidaVoz";
 import { EcoTeclado } from "./voz/ecoTeclado";
 import { AnunciarPantalla } from "./voz/anunciarPantalla";
 import { LectorFoco } from "./voz/lectorFoco";
@@ -49,6 +50,7 @@ export default function App() {
   return (
     <ProveedorAvisos>
     <ProveedorSpotify>
+      <ModalBienvenidaVoz />
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/registro" element={<RegistrarUsuarioPage />} />
