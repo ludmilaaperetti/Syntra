@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { hablar } from './narrador';
+import { esSeccionSinVoz, hablar } from './narrador';
 import { darBienvenida, reiniciarBienvenida } from './bienvenida';
 
 const PANTALLAS: Record<string, string> = {
@@ -39,6 +39,10 @@ export function AnunciarPantalla() {
     if (pathname === '/') reiniciarBienvenida();
     if (pathname === '/dashboard') {
       darBienvenida();
+      return;
+    }
+    if (esSeccionSinVoz(pathname)) {
+      hablar('Esta sección no está disponible con la voz de Syntra. Con Tab llegás al menú para ir a otra.', undefined, true);
       return;
     }
     const nombre = nombreDePantalla(pathname);

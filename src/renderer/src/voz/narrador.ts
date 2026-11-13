@@ -46,12 +46,40 @@ export function hayLector(): boolean {
   return lectorActivo && !vozPropia;
 }
 
+// false cuando el usuario eligió no usar la voz: Syntra no dice nada.
+// Arranca con lo que eligió el usuario con sesión abierta (si se abre la app ya logueado).
+let modoVoz = leerModoVoz();
+
+function leerModoVoz(): boolean {
+  try {
+    return localStorage.getItem(`syntra:modoVoz:${localStorage.getItem('usuarioId')}`) !== 'no';
+  } catch {
+    return true;
+  }
+}
+
+export function activarModoVoz(si: boolean): void {
+  modoVoz = si;
+  if (!si) detener();
+}
+
+// Secciones que no son accesibles por voz: ahí Syntra no lee nada.
+const SECCIONES_SIN_VOZ = ['/proyectos', '/estadisticas'];
+
+export function esSeccionSinVoz(ruta: string): boolean {
+  return SECCIONES_SIN_VOZ.some((s) => ruta === s || ruta.startsWith(`${s}/`));
+}
+
+const rutaActual = () => window.location.hash.replace(/^#/, '') || '/';
+
 let pendiente: ReturnType<typeof setTimeout> | undefined;
 let turno = 0;
 
 // Dice un texto: con la voz de Syntra o, si hay lector de pantalla, por la región aria-live.
 // Corta lo que se estaba diciendo. alTerminar se llama solo si nadie la interrumpió.
-export function hablar(texto: string, alTerminar?: () => void): void {
+// avisoSeccion: solo para avisar al entrar que la sección no se lee por voz.
+export function hablar(texto: string, alTerminar?: () => void, avisoSeccion = false): void {
+  if (!modoVoz || (!avisoSeccion && esSeccionSinVoz(rutaActual()))) return;
   const miTurno = ++turno;
   clearTimeout(pendiente);
   speechSynthesis.cancel();
