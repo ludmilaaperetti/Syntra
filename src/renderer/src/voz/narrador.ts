@@ -42,6 +42,11 @@ export function usarVozPropia(si: boolean): void {
   vozPropia = si;
 }
 
+// true si NVDA, JAWS o el Narrador están corriendo (aunque NVDA esté en modo silencioso).
+export function lectorPrendido(): boolean {
+  return lectorActivo;
+}
+
 export function hayLector(): boolean {
   return lectorActivo && !vozPropia;
 }
@@ -52,7 +57,9 @@ let modoVoz = leerModoVoz();
 
 function leerModoVoz(): boolean {
   try {
-    return localStorage.getItem(`syntra:modoVoz:${localStorage.getItem('usuarioId')}`) !== 'no';
+    const delUsuario = localStorage.getItem(`syntra:modoVoz:${localStorage.getItem('usuarioId')}`);
+    if (delUsuario !== null) return delUsuario !== 'no';
+    return localStorage.getItem('syntra.modoVoz') !== 'false';
   } catch {
     return true;
   }
@@ -60,7 +67,6 @@ function leerModoVoz(): boolean {
 
 export function activarModoVoz(si: boolean): void {
   modoVoz = si;
-  if (!si) detener();
 }
 
 // Secciones que no son accesibles por voz: ahí Syntra no lee nada.

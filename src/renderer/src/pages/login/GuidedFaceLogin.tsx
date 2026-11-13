@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as faceapi from '@vladmandic/face-api';
 import { Button } from '../../components/ui/button/button';
 import { UsarCamara } from '../../hooks/usarCamara';
+import '../../styles/voz.css';
 import { hablar } from '../../utils/hablar';
 import {
   analizarPosicionRostro,
@@ -310,7 +311,7 @@ export function GuidedFaceLogin({
           onLoadedData={alCargarVideo}
         />
       </div>
-      <p className="voz-login-mensaje" aria-live="polite" aria-atomic="true">
+      <p className="voz-login-mensaje">
         {mensaje}
       </p>
       {intentos > 0 && fase !== 'FALLBACK' && (

@@ -6,20 +6,6 @@ import './styles/layout.css';
 import { aplicarPreferencia } from './hooks/usarModo';
 import { cargarReglas } from './permisos';
 import { VoiceProvider } from './hooks/useVoice';
-
-aplicarPreferencia();
-
-cargarReglas()
-  .catch((e) => console.error('No se pudieron cargar los permisos', e))
-  .finally(() => {
-    ReactDOM.createRoot(document.getElementById('root')!).render(
-      <VoiceProvider>
-        <HashRouter>
-          <App />
-        </HashRouter>
-      </VoiceProvider>,
-    );
-  });
 import { configurarLector } from './voz/narrador';
 
 aplicarPreferencia();
@@ -35,8 +21,10 @@ Promise.all([
   window.api.lectorPantallaActivo().then(configurarLector).catch(() => configurarLector(false)),
 ]).finally(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
-    <HashRouter>
-      <App />
-    </HashRouter>,
+    <VoiceProvider>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </VoiceProvider>,
   );
 });

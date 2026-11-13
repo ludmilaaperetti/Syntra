@@ -1,4 +1,3 @@
-import { confirmar } from './confirmacion';
 import { activarModoVoz, configurarLector, hablar, hayLector, usarVozPropia } from './narrador';
 
 const INDICACIONES =
@@ -6,9 +5,20 @@ const INDICACIONES =
 
 let yaSaludo = false;
 
+// Avisa al VoiceProvider (cartel y Ctrl+Alt+V) la elección del usuario que entró.
+export const EVENTO_MODO_VOZ = 'syntra:modoVoz';
+
+// Lo que se respondió en el cartel de bienvenida en esta compu (sin respuesta: con voz).
+function modoDelEquipo(): boolean {
+  try {
+    return localStorage.getItem('syntra.modoVoz') !== 'false';
+  } catch {
+    return true;
+  }
+}
+
 // Las elecciones se guardan por usuario: cada pregunta se hace una sola vez.
 const claveModoVoz = () => `syntra:modoVoz:${localStorage.getItem('usuarioId')}`;
-const claveVozPropia = () => `syntra:vozPropia:${localStorage.getItem('usuarioId')}`;
 
 function leerEleccion(clave: string): boolean | null {
   try {
@@ -30,8 +40,9 @@ function guardarEleccion(clave: string, si: boolean): void {
 // Al volver al inicio de sesión: el próximo usuario arranca de cero.
 export function reiniciarBienvenida(): void {
   yaSaludo = false;
-  usarVozPropia(false);
-  activarModoVoz(true);
+  // En el login vale la respuesta del cartel de bienvenida, no la del usuario que salió.
+  activarModoVoz(modoDelEquipo());
+  window.dispatchEvent(new CustomEvent<boolean>(EVENTO_MODO_VOZ, { detail: modoDelEquipo() }));
 }
 
 // La primera vez que se llega al inicio: si hay NVDA, ofrece dormirlo para que guíe la voz de Syntra.
@@ -42,24 +53,15 @@ export async function darBienvenida(): Promise<void> {
   // Se vuelve a preguntar: si Windows avisó tarde de NVDA, Syntra hablaría encima.
   configurarLector(await window.api.lectorPantallaActivo().catch(() => hayLector()));
 
-  // Primero: si este usuario quiere usar Syntra con voz. Si dice que no, Syntra no habla más.
+  // Primero: si este usuario usa Syntra con voz. La primera vez hereda lo que se respondió
+  // en el cartel de bienvenida, sin volver a preguntar. Ctrl+Alt+V lo cambia.
   let modoVoz = leerEleccion(claveModoVoz());
   if (modoVoz === null) {
-    modoVoz = await confirmar('¿Querés que Syntra te guíe con su voz?');
+    modoVoz = modoDelEquipo();
     guardarEleccion(claveModoVoz(), modoVoz);
   }
   activarModoVoz(modoVoz);
-  if (!modoVoz) return;
-
-  if (hayLector()) {
-    let vozPropia = leerEleccion(claveVozPropia());
-    if (vozPropia === null) {
-      vozPropia = await confirmar(
-        'Para que te guíe la voz de Syntra, activá el modo silencioso de NVDA con Insert más Shift más S y confirmá.'
-      );
-      guardarEleccion(claveVozPropia(), vozPropia);
-    }
-    usarVozPropia(vozPropia);
-  }
-  hablar(INDICACIONES);
+  usarVozPropia(modoVoz);
+  window.dispatchEvent(new CustomEvent<boolean>(EVENTO_MODO_VOZ, { detail: modoVoz }));
+  if (modoVoz) hablar(INDICACIONES);
 }

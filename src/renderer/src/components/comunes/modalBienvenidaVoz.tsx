@@ -1,51 +1,28 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useVoice } from '../../hooks/useVoice';
-import '../../styles/voz.css';
+import { hablar } from '../../utils/hablar';
 
+// Al abrir Syntra por primera vez, la voz de Syntra pregunta si se usa con voz (no hay nada escrito).
 export function ModalBienvenidaVoz() {
   const { modoVoz, responderModoVoz } = useVoice();
-  const dialogoRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    dialogoRef.current?.focus();
-  }, []);
 
   useEffect(() => {
     if (modoVoz !== null) return;
+    // Se avisa antes de NVDA: si no se lo duerme, lee todo encima de Syntra.
+    hablar(
+      'Si tenés NVDA prendido, activá el modo silencioso con Insert más Shift más S. ' +
+        '¿Querés usar Syntra con la voz? Apretá Espacio o decí sí. Escape para no.',
+    );
 
     const alPresionar = (event: KeyboardEvent) => {
-      if (event.key === 'Tab') {
-        event.preventDefault();
-        dialogoRef.current?.focus();
-      } else if (event.code === 'Space') {
-        event.preventDefault();
-        responderModoVoz(true);
-      } else if (event.key === 'Escape') {
-        event.preventDefault();
-        responderModoVoz(false);
-      }
+      if (event.code !== 'Space' && event.key !== 'Escape') return;
+      event.preventDefault();
+      responderModoVoz(event.code === 'Space');
     };
 
     window.addEventListener('keydown', alPresionar);
     return () => window.removeEventListener('keydown', alPresionar);
   }, [modoVoz, responderModoVoz]);
 
-  if (modoVoz !== null) return null;
-
-  return (
-    <div className="voz-modal-fondo">
-      <div
-        ref={dialogoRef}
-        className="voz-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="voz-modal-titulo"
-        tabIndex={-1}
-      >
-        <h1 id="voz-modal-titulo">¿Querés usar Syntra con la voz?</h1>
-        <p>Apretá Espacio o decí sí.</p>
-        <p>Escape para no.</p>
-      </div>
-    </div>
-  );
+  return null;
 }

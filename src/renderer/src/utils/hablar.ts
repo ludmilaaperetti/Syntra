@@ -1,4 +1,2 @@
-export function hablar(texto: string): void {
-  // TODO: Reemplazar por VoiceService de accesibilidad implementado por Danita.
-  window.speechSynthesis.speak(new SpeechSynthesisUtterance(texto));
-}
+// Todas las frases pasan por el narrador de Syntra: respeta el modo voz, NVDA y las secciones sin voz.
+export { hablar } from '../voz/narrador';
