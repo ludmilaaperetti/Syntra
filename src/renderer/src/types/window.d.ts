@@ -40,10 +40,12 @@ import type { SpotifyApi } from './spotify';
 import type { MateriasApi } from './materias';
 import type { CuadernosApi } from './cuadernos';
 import type { MaterialIAApi } from './ia';
+// AJUSTAR la ruta según dónde esté este archivo (tiene que apuntar a src/preload/materialIAExtra.preload.ts)
+import type { MaterialIAExtraApi } from '../../../preload/apis/materialIA';
 
 declare global {
   interface Window {
-    api: SesionesEstudioApi & SpotifyApi & MateriasApi & CuadernosApi & MaterialIAApi & {
+    api: SesionesEstudioApi & SpotifyApi & MateriasApi & CuadernosApi & MaterialIAApi & MaterialIAExtraApi & {
       // Gestion de material de estudio
       crearNodo: (datos: { nombre: string; idPadre: number | null }) => Promise<Nodo>;
       modificarNodo: (datos: { id: number; nombre: string; idMateria?: number | null }) => Promise<Nodo>;

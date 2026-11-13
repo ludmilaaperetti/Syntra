@@ -176,6 +176,8 @@ import {
 } from './logicaPersistente/gestionDeProyectos/portadaProyecto';
 import { PortadasProyectos } from './administracionDePersistencia/portadasProyectos';
 import { registerPortadasProyectosIpc } from './ipc/portadasProyectos.ipc';
+import { ServicioIA } from './logicaNoPersistente/ia/servicioIA.js';
+import { GuardarGuiaPreguntas } from './logicaPersistente/gestionDeMaterialIA/guardarGuiaPreguntas';
 
 // Estadísticas
 import { ResumenProyectos } from './logicaPersistente/gestionDeEstadisticas/resumenProyectos';
@@ -272,6 +274,8 @@ import { GuardarMaterialIA } from './logicaPersistente/gestionDeMaterialIA/guard
 import { ListarMaterialesIA } from './logicaPersistente/gestionDeMaterialIA/listarMaterialesIA';
 import { MaterialIA } from './administracionDePersistencia/materialIA';
 import { registerMaterialIAIpc } from './ipc/materialIA.ipc';
+// junto a los otros imports de ipc
+import { registrarIpcPlanArchivo } from './ipc/planArchivo.ipc';
 
 let mainWindow: BrowserWindow | null = null;
 let procesoSesion: ProcesoSesionEstudio | null = null;
@@ -671,7 +675,7 @@ function wireDependencies(): ProcesoSesionEstudio {
     new AutenticacionSpotify(configSpotify, (url) => shell.openExternal(url))
   );
   registerSpotifyIpc(clienteSpotify);
-  // Inteligencia artificial: router (Luna → Gemini → Gemma), claves, Ollama y una sola cola para todo.
+  // Inteligencia artificial: router (GptMini → Gemini → Gemma), claves, Ollama y una sola cola para todo.
   // Se crea UNA sola vez: registrarIpcIA no puede llamarse dos veces (ipcMain.handle falla con el mismo canal).
   const ia = crearServiciosIA({
     alProgreso: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:progreso', e)),
@@ -680,9 +684,13 @@ function wireDependencies(): ProcesoSesionEstudio {
   iaServicios = ia;
   registrarIpcIA(ia);
 
-  // Material con IA: la IA propone, el usuario revisa en la pantalla previa y recién ahí se guarda.
+  const generadorMaterial = new GeneradorMaterialIA(ia.router, {
+    maxTokens: Number(process.env.IA_MAX_TOKENS_FRAGMENTO) || 3000,
+    solapamientoTokens: 150,
+  });
+  const servicioIA = new ServicioIA(ia);
   const materialIA = new MaterialIA(
-    obtenerArchivo,
+    archivos,
     almacenamiento,
     new GeneradorMaterialIA(ia.router, {
       maxTokens: Number(process.env.IA_MAX_TOKENS_FRAGMENTO) || 3000,
@@ -691,8 +699,11 @@ function wireDependencies(): ProcesoSesionEstudio {
     ia.cola,
     new GuardarMaterialIA(persistencia),
     new ListarMaterialesIA(persistencia),
+    new GuardarGuiaPreguntas(archivos, nodos, persistencia),
+    servicioIA,
   );
   registerMaterialIAIpc(materialIA);
+  registrarIpcPlanArchivo(generadorMaterial, ia.cola);
   // Una sola cola para toda la IA: al cerrar se cancela todo lo que esté en curso.
   cancelarIA = () => ia.cola.cancelarTodo();
 

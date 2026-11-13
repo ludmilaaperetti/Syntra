@@ -40,6 +40,7 @@ export const iaApi = {
   descartarMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:descartar', datos),
   guardarMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:guardar', datos),
   listarMaterialesIA: (datos?: unknown) => ipcRenderer.invoke('materialIA:listar', datos),
+  
 };
 
 export type ApiIA = typeof iaApi;

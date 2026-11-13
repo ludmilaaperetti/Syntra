@@ -13,10 +13,10 @@ import {
   type ResultadoIA,
 } from './dto.js';
 import { ErrorRouter, esAbort } from './errores.js';
-import { fragmentarSimple } from './fragmentar.js';
+import { fragmentarEnTextos } from './fragmentador.js';
 import { armarUsuario } from './prompts.js';
 import type { RouterModelos } from './routerModelos.js';
-import { TAREAS_IA, type DefTarea } from './tareasIA.js';
+import { TAREAS_IA, type DefTarea } from './tareas.js';
 
 export interface DependenciasServicioIA {
   claves: AlmacenClaves;
@@ -35,7 +35,7 @@ export class ServicioIA {
     const def: DefTarea = TAREAS_IA[pedido.tarea]; // anotar el tipo evita que TS infiera una unión de esquemas
     try {
       const partes = await this.d.cola.add(pedido.idTrabajo, async (ctx) => {
-        const fragmentos = fragmentarSimple(pedido.texto);
+        const fragmentos = fragmentarEnTextos(pedido.texto);
         return mapearConProgreso(fragmentos, ctx, async (frag) => {
           const r = await this.d.router.generar(pedido.tarea, {
             sistema: def.sistema,

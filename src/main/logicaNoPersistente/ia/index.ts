@@ -2,8 +2,7 @@
 import { app, net, safeStorage } from 'electron';
 import { join } from 'node:path';
 import { AlmacenClaves } from '../../servicios/ia/almacenClaves.js';
-import { ProveedorGemini } from '../../servicios/ia/proveedorGemini.js';
-import { ProveedorLuna } from '../../servicios/ia/proveedorLuna.js';
+import { ProveedorGptMini } from '../../servicios/ia/proveedorGptMini.js'; // <-- Ruta corregida según tu estructura
 import { GestorOllama, normalizarHost, type EventoOllama } from '../../servicios/ia/gestorOllama.js';
 import { InstaladorOllama, URL_DESCARGA_OLLAMA, type ProgresoInstalacion } from '../../servicios/ia/instaladorOllama.js';
 import { ProveedorOllama } from '../../servicios/ia/proveedorOllama.js';
@@ -35,13 +34,13 @@ export function crearServiciosIA(opciones: OpcionesServiciosIA = {}) {
   const hostOllama = normalizarHost(process.env.OLLAMA_HOST);
   const modeloOllama = process.env.OLLAMA_MODELO ?? 'gemma4:e2b'; // por defecto el liviano; se puede cambiar en .env
   const ollama = new ProveedorOllama('gemma', { host: hostOllama, modelo: modeloOllama });
+  
   // Instalador del paquete independiente de Ollama: queda en userData/ollama (sin administrador, sin tocar el PATH).
   const instalador = new InstaladorOllama({ carpetaInstalacion: join(app.getPath('userData'), 'ollama') });
   const instalar = (alProgreso: (p: ProgresoInstalacion) => void, senal: AbortSignal) =>
     instalador.instalar(alProgreso, senal);
 
   // Al abrir la app: instala Ollama si falta, lo inicia y DESCARGA el modelo si falta (~4,6 GB, una sola vez).
-  // Para desactivar la descarga del modelo: OLLAMA_AUTO_DESCARGA=0 en el .env (entonces avisa 'falta_modelo' y espera).
   const gestorOllama = new GestorOllama({
     host: hostOllama,
     modelo: modeloOllama,
@@ -49,34 +48,28 @@ export function crearServiciosIA(opciones: OpcionesServiciosIA = {}) {
     alEvento: opciones.alOllama,
     autoDescargar: process.env.OLLAMA_AUTO_DESCARGA !== '0',
     urlDescarga: URL_DESCARGA_OLLAMA,
-    // El de la persona o el de la carpeta de la app; si no hay ninguno, 'ollama' da ENOENT y se dispara la instalación.
     comando: () => instalador.rutaEjecutable() ?? 'ollama',
-    // Solo si hay paquete para este sistema. OLLAMA_AUTO_INSTALAR=0 lo desactiva.
     ...(instalador.soportado ? { instalar, autoInstalar: process.env.OLLAMA_AUTO_INSTALAR !== '0' } : {}),
   });
 
   const proveedores = [
-    new ProveedorLuna({
-      recurso: process.env.AZURE_RECURSO ?? '',
-      despliegue: process.env.AZURE_DESPLIEGUE ?? 'luna',
-      obtenerClave: clave('luna', 'AZURE_OPENAI_API_KEY'),
-    }),
-    new ProveedorGemini({
-      modelo: process.env.GEMINI_MODELO ?? 'COMPLETAR-con-el-id-vigente',
-      obtenerClave: clave('gemini', 'GEMINI_API_KEY'),
+    new ProveedorGptMini({
+      baseURL: process.env.AZURE_RECURSO ?? '',
+      despliegue: process.env.AZURE_DESPLIEGUE ?? 'gpt-5-mini',
+      obtenerClave: clave('gptMini', 'AZURE_OPENAI_API_KEY'), // Nota: el ID del almacén ahora coincide con el readonly id ('gptMini')
     }),
     ollama,
   ];
 
-  // Luna principal → Gemini alternativa → Gemma si no hay conexión (o fallan los dos)
-  const porDefecto = ['luna', 'gemini', 'gemma'];
+  // GptMini principal ('gptMini') → Gemma si no hay conexión (o fallan los dos)
+  const porDefecto = ['gptMini']; // , 'gemma'
   const cadenas = Object.fromEntries(TAREAS.map((t) => [t, porDefecto])) as Record<Tarea, string[]>;
 
   const router = new RouterModelos(proveedores, {
     cadenas,
     hayInternet: () => net.isOnline(),
     reintentosSalida: 1,
-    alEvento: (e) => console.log('[ia]', e), // luego: mandarlo a la UI para "usando Gemini…"
+    alEvento: (e) => console.log('[ia]', e),
   });
 
   const cola = new ColaEjecucion(2, opciones.alProgreso);

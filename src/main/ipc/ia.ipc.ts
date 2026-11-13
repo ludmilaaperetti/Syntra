@@ -9,8 +9,6 @@ import {
 } from '../logicaNoPersistente/ia/dto.js';
 import type { ServicioIA } from '../logicaNoPersistente/ia/servicioIA.js';
 import { z } from 'zod';
-import { NOMBRES_TAREAS } from '../logicaNoPersistente/ia/tipos.js';
-
 /** Los Error NO viajan bien por IPC (se pierden propiedades): siempre devolvemos un objeto simple. */
 type Resp<T> = { ok: true; dato: T } | { ok: false; causa: string; mensaje: string };
 

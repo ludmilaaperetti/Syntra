@@ -33,6 +33,7 @@ import { EstadisticasPage } from "./pages/estadisticas/estadisticasPage";
 import { SesionesEstudioPage } from "./pages/sesionesEstudio/sesionesEstudioPage";
 import { CrearSesionEstudioPage } from "./pages/sesionesEstudio/crearSesionEstudioPage";
 import { SesionEstudioPage } from "./pages/sesionesEstudio/sesionEstudioPage";
+import { GuiasPreguntasPage } from "./pages/guiaPreguntas/guiaPreguntasPage";
 import { ProveedorAvisos } from "./hooks/usarAvisos";
 import { ProveedorSpotify } from "./hooks/usarSpotify";
 
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="/sesiones/:idSesion" element={<SesionEstudioPage />} />
         <Route path="/estadisticas" element={<EstadisticasPage />} />
         <Route path="/proximamente/:id" element={<Proximamente />} />
+        <Route path="/guias-preguntas" element={<GuiasPreguntasPage />} />
       </Routes>
       <PanelPerfil />
     </ProveedorSpotify>

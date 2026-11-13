@@ -30,6 +30,11 @@ export class GeneradorMaterialIA {
     const { texto } = await extraerTexto(fuente.ruta, fuente.extension);
     const fragmentos = fragmentar(texto, this.opcionesFragmentador);
     const def: DefTarea = TAREAS_IA[tipo];
+    if (!def) {
+      throw new Error(
+        `No hay tarea de IA para "${String(tipo)}". Claves disponibles: ${Object.keys(TAREAS_IA).join(', ')}`,
+      );
+    }
     const usados = new Set<string>();
 
     // De a un fragmento: avisa "parte X de N" y se puede cancelar entre fragmentos.

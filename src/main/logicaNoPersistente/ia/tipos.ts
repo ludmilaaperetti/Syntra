@@ -15,7 +15,7 @@ export const TAREAS = [
 export type Tarea = (typeof TAREAS)[number]; // 'resumen' | 'cuestionario' | ...
 
 // Las que se generan desde un archivo de Material y se revisan en la pantalla previa.
-export const TIPOS_MATERIAL_IA = ['resumen', 'cuestionario', 'mapaMental'] as const satisfies readonly Tarea[];
+export const TIPOS_MATERIAL_IA = ['resumen', 'cuestionario', 'mapaMental', 'flashcards', 'materias', 'guia'] as const satisfies readonly Tarea[];
 export type TipoMaterialIA = (typeof TIPOS_MATERIAL_IA)[number];
 
 // ---------- Archivos de fuente ----------

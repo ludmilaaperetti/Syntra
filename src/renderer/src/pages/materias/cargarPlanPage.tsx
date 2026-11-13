@@ -1,10 +1,13 @@
-import { Fragment, useEffect, useState } from 'react';
+// src/renderer/src/pages/materias/cargarPlanPage.tsx
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check, ClipboardPaste, Copy, Plus, TriangleAlert } from 'lucide-react';
+import { ClipboardPaste, FileUp, Plus, TriangleAlert } from 'lucide-react';
 import { PlantillaLayout } from '../plantillaLayout/plantillaLayout';
 import { Boton } from '../../components/comunes/boton';
 import { usarAvisos } from '../../hooks/usarAvisos';
 import { obtenerUsuarioId } from '../../../lib/sesion';
+import { apiIA, nuevoTrabajoIA } from '../../utils/apiMaterialIA';
+import { IndicadorIA } from '../../components/materialIA/indicadorIA';
 import type { Cuatrimestre, EstadoMateria, Formacion } from '../../types/materias';
 import { CUATRIMESTRES, ESTADOS, PROMPT_PLAN, estadoInicial, mensajeDeError } from './utilidadesMaterias';
 import { Pasos } from './formacionPage';
@@ -20,12 +23,26 @@ interface Fila {
   correlativas: string; // nombres separados con ";"
 }
 
+interface MateriaLeida {
+  nombre: string;
+  anio: number | null;
+  cuatrimestre: Cuatrimestre | null;
+  correlativas: string[];
+}
+
+type RespuestaTranscripcion =
+  | { ok: true; nombre: string; texto: string; proveedores?: string[] }
+  | { ok: false; causa: string; mensaje: string };
+
+interface ApiTranscripcion {
+  transcribirPlanIA?: (datos: { trabajoId: string; ruta: string; prompt: string }) => Promise<RespuestaTranscripcion>;
+}
+
 const separar = (texto: string) => texto.split(';').map((t) => t.trim()).filter(Boolean);
 const normalizar = (texto: string) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
 const EJEMPLO = 'Primer año\nPrimer cuatrimestre\nÁlgebra y Geometría Analítica\nAnálisis Matemático I\nAnual\nAlgoritmos y Estructuras de Datos\n\nSegundo año\n...';
 
-// Carga de materias pegando el plan de estudios: se lee el texto y se revisa antes de guardar.
 export function CargarPlanPage() {
   const usuarioId = obtenerUsuarioId() ?? 0;
   const navigate = useNavigate();
@@ -33,11 +50,15 @@ export function CargarPlanPage() {
   const idFormacion = Number(useParams().idFormacion);
   const [formacion, setFormacion] = useState<Formacion | null>(null);
   const [texto, setTexto] = useState('');
+  const [nombreArchivo, setNombreArchivo] = useState('');
   const [filas, setFilas] = useState<Fila[] | null>(null);
   const [estadoCursadas, setEstadoCursadas] = useState<EstadoMateria>('libre');
   const [error, setError] = useState('');
   const [trabajando, setTrabajando] = useState(false);
+  const [leyendoArchivo, setLeyendoArchivo] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  const trabajoIA = useRef<ReturnType<typeof nuevoTrabajoIA> | null>(null);
+  const entradaArchivo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     window.api.listarFormaciones({ usuarioId })
@@ -48,6 +69,15 @@ export function CargarPlanPage() {
   const anioActual = formacion?.anioActual ?? null;
   const momento = { anioActual, cuatrimestreActual: formacion?.cuatrimestreActual ?? null };
   const pideCuatrimestre = formacion?.organizacion === 'cuatrimestral';
+  const ocupado = trabajando || leyendoArchivo;
+
+  function armarFilas(leidas: MateriaLeida[]): void {
+    setFilas(leidas.map((m, i) => ({
+      clave: i, incluir: true, nombre: m.nombre, anio: m.anio ? String(m.anio) : '',
+      cuatrimestre: m.cuatrimestre ?? '', estado: estadoInicial(m.anio, m.cuatrimestre, momento, estadoCursadas),
+      correlativas: m.correlativas.join('; '),
+    })));
+  }
 
   async function leer(): Promise<void> {
     setTrabajando(true);
@@ -55,15 +85,61 @@ export function CargarPlanPage() {
     try {
       const leidas = await window.api.leerPlanEstudios({ texto });
       if (leidas.length === 0) return setError('No se encontraron materias. Revisá que haya una materia por línea.');
-      setFilas(leidas.map((m, i) => ({
-        clave: i, incluir: true, nombre: m.nombre, anio: m.anio ? String(m.anio) : '',
-        cuatrimestre: m.cuatrimestre ?? '', estado: estadoInicial(m.anio, m.cuatrimestre, momento, estadoCursadas),
-        correlativas: m.correlativas.join('; '),
-      })));
+      armarFilas(leidas);
     } catch (e) {
       setError(mensajeDeError(e, 'No se pudo leer el plan.'));
     } finally {
       setTrabajando(false);
+    }
+  }
+
+  // Carga del archivo: Primero prueba extracción local por sistema; si no funciona o es un escaneo, recurre a la IA automáticamente.
+  async function cargarArchivo(archivo: File | undefined): Promise<void> {
+    if (!archivo || ocupado) return;
+    const ruta = window.api.rutaDeArchivo(archivo);
+    if (!ruta) return setError('No se pudo leer el archivo elegido.');
+    setError('');
+    setLeyendoArchivo(true);
+    trabajoIA.current = nuevoTrabajoIA();
+
+    try {
+      let resultado: { nombre: string; texto: string } | null = null;
+      let errorLocal = '';
+
+      // 1. Intentamos primero la extracción local por el sistema (rápida)
+      try {
+        resultado = await apiIA().extraerTextoPlan({ ruta });
+      } catch (e) {
+        errorLocal = mensajeDeError(e, '');
+      }
+
+      // 2. Si la extracción local falló (por ejemplo, porque es un PDF escaneado sin texto seleccionable), recurrimos a la IA
+      if (!resultado) {
+        const transcribir = (apiIA() as unknown as ApiTranscripcion).transcribirPlanIA;
+        if (typeof transcribir === 'function') {
+          try {
+            const r = await transcribir({ trabajoId: trabajoIA.current.id, ruta, prompt: PROMPT_PLAN });
+            if (r.ok && r.texto.trim()) {
+              resultado = { nombre: r.nombre || archivo.name, texto: r.texto };
+            } else if (!r.ok) {
+              if (/cancel/i.test(r.causa)) return; // la persona canceló
+              errorLocal = r.mensaje || errorLocal;
+            }
+          } catch (e) {
+            errorLocal = mensajeDeError(e, errorLocal);
+          }
+        }
+      }
+
+      if (!resultado) {
+        return setError(errorLocal || 'No se pudo extraer texto del archivo mediante el sistema ni mediante la IA.');
+      }
+
+      setNombreArchivo(resultado.nombre);
+      setTexto(resultado.texto);
+    } finally {
+      trabajoIA.current = null;
+      setLeyendoArchivo(false);
     }
   }
 
@@ -81,7 +157,6 @@ export function CargarPlanPage() {
     setFilas((fs) => fs!.map((f) => {
       if (f.clave !== clave) return f;
       const nueva = { ...f, ...cambios };
-      // Al cambiar el año o el cuatrimestre se recalcula el estado (Cursando, No cursada...).
       if (cambios.anio !== undefined || cambios.cuatrimestre !== undefined) {
         nueva.estado = estadoInicial(nueva.anio ? Number(nueva.anio) : null, nueva.cuatrimestre || null, momento, estadoCursadas);
       }
@@ -97,7 +172,6 @@ export function CargarPlanPage() {
   const elegidas = filas?.filter((f) => f.incluir) ?? [];
   const dudosas = filas?.filter((f) => f.incluir && !f.anio).length ?? 0;
   const noCursadas = elegidas.filter((f) => f.estado === 'no_cursada').length;
-  // Correlativas que no coinciden con ninguna materia de la lista: no se van a guardar.
   const nombres = new Set(elegidas.map((f) => normalizar(f.nombre)));
   const sueltas = (f: Fila) => separar(f.correlativas).filter((c) => !nombres.has(normalizar(c)));
   const sinCoincidir = elegidas.reduce((n, f) => n + sueltas(f).length, 0);
@@ -134,27 +208,66 @@ export function CargarPlanPage() {
               <span className="materias-insignia"><ClipboardPaste size={26} /></span>
               <div>
                 <span className="materias-etiqueta">Carga automática{formacion ? ` · ${formacion.nombre}` : ''}</span>
-                <h2>Pegá tu plan de estudios</h2>
-                <p className="materias-detalle">Copiá el plan desde la página de tu carrera o del PDF. Syntra reconoce los años y cuatrimestres y arma la lista.</p>
+                <h2>Cargá tu plan de estudios</h2>
+                <p className="materias-detalle">Subí el archivo del plan (PDF, Word o texto). El sistema intentará leerlo automáticamente y, si es un escaneo, la IA se encargará de extraer el texto en el cuadro de abajo.</p>
               </div>
             </div>
-            <div className="materias-prompt">
+
+            <div
+              className="materias-prompt"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); void cargarArchivo(e.dataTransfer.files[0]); }}
+            >
               <div>
-                <strong>¿Tenés el plan en PDF o en foto?</strong>
-                <span>Copiá este prompt, pegalo en cualquier IA junto con tu plan y pegá acá lo que te devuelva.</span>
+                <strong>Subí el archivo de tu plan</strong>
+                <span>PDF, Word (.docx) o texto. También podés arrastrarlo hasta acá.</span>
+                {nombreArchivo && <small>Archivo: {nombreArchivo}</small>}
               </div>
-              <Boton variante="contorno" onClick={() => void copiarPrompt()}>
-                {copiado ? <><Check size={16} /> Copiado</> : <><Copy size={16} /> Copiar prompt para IA</>}
+              <Boton variante="contorno" onClick={() => entradaArchivo.current?.click()} disabled={ocupado}>
+                <FileUp size={16} /> {leyendoArchivo ? 'Leyendo archivo…' : 'Elegir archivo'}
               </Boton>
+              <input
+                ref={entradaArchivo}
+                type="file"
+                accept=".pdf,.docx,.txt,.md"
+                hidden
+                onChange={(e) => {
+                  const archivo = e.target.files?.[0];
+                  e.target.value = '';
+                  void cargarArchivo(archivo);
+                }}
+              />
             </div>
-            <label className="materias-campo">Texto del plan
-              <textarea rows={14} value={texto} placeholder={EJEMPLO} onChange={(e) => setTexto(e.target.value)} />
+
+            {leyendoArchivo && (
+              <>
+                <IndicadorIA mensaje="Leyendo archivo (sistema / IA)" detalle="Procesando el contenido del plan de estudios..." />
+                <div className="materias-acciones">
+                  <Boton variante="contorno" onClick={() => void trabajoIA.current?.cancelar()}>Cancelar</Boton>
+                </div>
+              </>
+            )}
+
+            <label className="materias-campo">O pegá el texto del plan
+              <textarea rows={10} value={texto} placeholder={EJEMPLO} disabled={ocupado} onChange={(e) => setTexto(e.target.value)} />
             </label>
-            <p className="materias-ayuda">Funciona mejor con una materia por línea y los títulos "Primer año", "2° cuatrimestre" o "Anual". Todavía no se guarda nada.</p>
+            <p className="materias-ayuda">
+              Una vez que aparezca el texto en el cuadro, revisalo y tocá "Leer plan" para armar la lista definitiva de materias. Todavía no se guarda nada.
+            </p>
+            <p className="materias-ayuda">
+              ¿Es una foto o un formato especial?{' '}
+              <button type="button" className="materias-link" onClick={() => void copiarPrompt()}>
+                {copiado ? 'Prompt copiado ✓' : 'Copiá este prompt'}
+              </button>
+              , pegalo en cualquier IA junto con tu plan y pegá acá lo que te devuelva.
+            </p>
+
             {error && <p className="materias-error" role="alert">{error}</p>}
             <div className="materias-acciones materias-acciones--separadas">
-              <button type="button" className="materias-link" onClick={() => navigate(`/materias?f=${idFormacion}&nueva=1`)}>Prefiero cargarlas a mano</button>
-              <Boton onClick={() => void leer()} disabled={!texto.trim() || trabajando}>{trabajando ? 'Leyendo…' : 'Leer plan'}</Boton>
+              <button type="button" className="materias-link" onClick={() => navigate(`/materias?f=${idFormacion}&nueva=1`)} disabled={ocupado}>Prefiero cargarlas a mano</button>
+              <div className="materias-botones">
+                <Boton onClick={() => void leer()} disabled={!texto.trim() || ocupado}>{trabajando ? 'Leyendo…' : 'Leer plan'}</Boton>
+              </div>
             </div>
           </section>
         )}

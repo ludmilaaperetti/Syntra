@@ -29,3 +29,11 @@ export function validarFuentes(f: Flashcards, material: string): Flashcards {
   if (validas.length === 0) throw new Error('Ninguna tarjeta tiene fuente verificable');
   return { tarjetas: validas };
 }
+
+// Entrada del IPC: generar flashcards desde un archivo de Material.
+export const generarFlashcardsSchema = z.object({
+  trabajoId: z.uuid({ error: 'Identificador de trabajo inválido.' }),
+  idArchivo: z.number().int().positive(),
+  cantidad: z.number().int().min(3).max(50).optional(),
+  indicaciones: z.string().trim().max(1800, { error: 'Las indicaciones no pueden superar los 1800 caracteres.' }).optional(),
+});
