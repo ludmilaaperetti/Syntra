@@ -4,3 +4,5 @@ node_modules/
 out
 # Datos de Electron de las instancias de prueba de sincronización
 electron-data-*/
+electron-data-1/
+electron-data-2/
