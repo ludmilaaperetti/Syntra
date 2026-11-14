@@ -40,10 +40,11 @@ import type { SpotifyApi } from './spotify';
 import type { MateriasApi } from './materias';
 import type { CuadernosApi } from './cuadernos';
 import type { MaterialIAApi } from './ia';
+import type { ChatIAApi } from './chatIA';
 
 declare global {
   interface Window {
-    api: SesionesEstudioApi & SpotifyApi & MateriasApi & CuadernosApi & MaterialIAApi & {
+    api: SesionesEstudioApi & SpotifyApi & MateriasApi & CuadernosApi & MaterialIAApi & ChatIAApi & {
       // Gestion de material de estudio
       crearNodo: (datos: { nombre: string; idPadre: number | null }) => Promise<Nodo>;
       modificarNodo: (datos: { id: number; nombre: string; idMateria?: number | null }) => Promise<Nodo>;

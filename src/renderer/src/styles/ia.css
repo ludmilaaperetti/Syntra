@@ -73,6 +73,17 @@
   resize: vertical;
 }
 
+.ia-elegir__nota {
+  margin: 0;
+  font-size: var(--tamano-sm);
+  color: var(--color-text-secondary);
+}
+
+.ia-elegir__acciones {
+  display: flex;
+  gap: var(--espacio-sm);
+}
+
 /* Progreso */
 
 .ia-progreso {

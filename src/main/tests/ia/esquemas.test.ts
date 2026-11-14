@@ -7,20 +7,19 @@ import {
 } from '../../logicaNoPersistente/ia/esquemas';
 import { mapaValido } from './ayudas';
 
+const pregunta = (cambios: object) => ({
+  tipo: 'opcion_multiple', enunciado: '¿?', opciones: ['a', 'b'], indiceCorrecta: 0,
+  respuesta: null, explicacion: 'e', tema: 'T', ...cambios,
+});
+
 test('cuestionario: rechaza una respuesta correcta que no existe', () => {
-  const r = cuestionarioSchema.safeParse({
-    titulo: 'T',
-    preguntas: [{ enunciado: '¿?', opciones: ['a', 'b'], indiceCorrecta: 3, explicacion: 'e' }],
-  });
+  const r = cuestionarioSchema.safeParse({ titulo: 'T', preguntas: [pregunta({ indiceCorrecta: 3 })] });
   expect(r.success).toBe(false);
   expect(r.error!.issues.some((i) => i.message.includes('no existe'))).toBe(true);
 });
 
 test('cuestionario: rechaza opciones repetidas', () => {
-  const r = cuestionarioSchema.safeParse({
-    titulo: 'T',
-    preguntas: [{ enunciado: '¿?', opciones: ['Sí', 'sí'], indiceCorrecta: 0, explicacion: 'e' }],
-  });
+  const r = cuestionarioSchema.safeParse({ titulo: 'T', preguntas: [pregunta({ opciones: ['Sí', 'sí'] })] });
   expect(r.success).toBe(false);
 });
 

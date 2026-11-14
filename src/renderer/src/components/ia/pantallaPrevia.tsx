@@ -4,19 +4,20 @@ import {
   nombreProveedorIA,
   NOMBRE_TIPO_IA,
   type ContenidoIA,
-  type Cuestionario,
   type MapaMental,
+  type MaterialIA,
   type PropuestaIA,
   type Resumen,
 } from '../../types/ia';
 
 interface PantallaPreviaProps {
   propuesta: PropuestaIA;
-  onGuardado: () => void;
+  onGuardado: (guardado: MaterialIA) => void;
   onDescartado: () => void;
 }
 
-// La IA propone → el usuario revisa, edita y confirma. Nada se guarda sin pasar por acá:
+// La IA propone → el usuario revisa, edita y confirma. Nada se guarda sin pasar por acá.
+// (Solo resúmenes y mapas: los cuestionarios no tienen pantalla previa, se verían las respuestas.)
 export function PantallaPrevia({ propuesta, onGuardado, onDescartado }: PantallaPreviaProps) {
   const [contenido, setContenido] = useState<ContenidoIA>(() => structuredClone(propuesta.contenido));
   const [guardando, setGuardando] = useState(false);
@@ -27,8 +28,7 @@ export function PantallaPrevia({ propuesta, onGuardado, onDescartado }: Pantalla
     setGuardando(true);
     setError(null);
     try {
-      await window.api.guardarMaterialIA({ trabajoId: propuesta.trabajoId, contenido });
-      onGuardado();
+      onGuardado(await window.api.guardarMaterialIA({ trabajoId: propuesta.trabajoId, contenido }));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo guardar.');
     } finally {
@@ -50,7 +50,6 @@ export function PantallaPrevia({ propuesta, onGuardado, onDescartado }: Pantalla
 
       <div className="ia-previa__cuerpo">
         {propuesta.tipo === 'resumen' && <EditorResumen valor={contenido as Resumen} onChange={setContenido} />}
-        {propuesta.tipo === 'cuestionario' && <EditorCuestionario valor={contenido as Cuestionario} onChange={setContenido} />}
         {propuesta.tipo === 'mapaMental' && <EditorMapa valor={contenido as MapaMental} onChange={setContenido} />}
       </div>
 
@@ -89,14 +88,6 @@ function revisar(tipo: PropuestaIA['tipo'], c: ContenidoIA): string[] {
     const r = c as Resumen;
     if (r.ideasClave.length === 0 || r.ideasClave.some((i) => !i.trim())) p.push('Hay ideas clave vacías (o ninguna).');
     if (r.secciones.length === 0 || r.secciones.some((s) => !s.titulo.trim() || !s.contenido.trim())) p.push('Hay secciones incompletas (o ninguna).');
-  } else if (tipo === 'cuestionario') {
-    const q = c as Cuestionario;
-    if (q.preguntas.length === 0) p.push('El cuestionario no tiene preguntas.');
-    q.preguntas.forEach((pr, i) => {
-      if (!pr.enunciado.trim() || !pr.explicacion.trim() || pr.opciones.some((o) => !o.trim())) {
-        p.push(`La pregunta ${i + 1} tiene campos vacíos.`);
-      }
-    });
   } else {
     const m = c as MapaMental;
     if (m.nodos.some((n) => !n.texto.trim())) p.push('Hay conceptos vacíos en el mapa.');
@@ -144,61 +135,6 @@ function EditorResumen({ valor, onChange }: { valor: Resumen; onChange: (v: Resu
       <button type="button" className="ia-editor__agregar"
         onClick={() => onChange({ ...valor, secciones: [...valor.secciones, { titulo: '', contenido: '' }] })}>
         + Sección
-      </button>
-    </div>
-  );
-}
-
-//Cuestionario 
-
-function EditorCuestionario({ valor, onChange }: { valor: Cuestionario; onChange: (v: Cuestionario) => void }) {
-  const cambiarPregunta = (i: number, p: Cuestionario['preguntas'][number]) =>
-    onChange({ ...valor, preguntas: reemplazar(valor.preguntas, i, p) });
-
-  return (
-    <div className="ia-editor">
-      <label className="ia-editor__campo">
-        Título
-        <input value={valor.titulo} onChange={(e) => onChange({ ...valor, titulo: e.target.value })} />
-      </label>
-
-      {valor.preguntas.map((p, i) => (
-        <fieldset className="ia-editor__bloque" key={i}>
-          <legend>Pregunta {i + 1}</legend>
-          <textarea rows={2} value={p.enunciado} onChange={(e) => cambiarPregunta(i, { ...p, enunciado: e.target.value })} />
-          {p.opciones.map((opcion, j) => (
-            <div className="ia-editor__fila" key={j}>
-              <input type="radio" name={`correcta-${i}`} checked={p.indiceCorrecta === j}
-                onChange={() => cambiarPregunta(i, { ...p, indiceCorrecta: j })} aria-label="Marcar como correcta" />
-              <input value={opcion} onChange={(e) => cambiarPregunta(i, { ...p, opciones: reemplazar(p.opciones, j, e.target.value) })} />
-              <button type="button" className="ia-editor__quitar" aria-label="Quitar opción" disabled={p.opciones.length <= 2}
-                onClick={() => cambiarPregunta(i, {
-                  ...p,
-                  opciones: quitar(p.opciones, j),
-                  // Si se borra una opción de arriba, la correcta sigue siendo la misma.
-                  indiceCorrecta: j < p.indiceCorrecta ? p.indiceCorrecta - 1 : j === p.indiceCorrecta ? 0 : p.indiceCorrecta,
-                })}>×</button>
-            </div>
-          ))}
-          {p.opciones.length < 6 && (
-            <button type="button" className="ia-editor__agregar" onClick={() => cambiarPregunta(i, { ...p, opciones: [...p.opciones, ''] })}>
-              + Opción
-            </button>
-          )}
-          <label className="ia-editor__campo">
-            Explicación
-            <textarea rows={2} value={p.explicacion} onChange={(e) => cambiarPregunta(i, { ...p, explicacion: e.target.value })} />
-          </label>
-          <button type="button" className="ia-editor__quitar-bloque"
-            onClick={() => onChange({ ...valor, preguntas: quitar(valor.preguntas, i) })}>Quitar pregunta</button>
-        </fieldset>
-      ))}
-      <button type="button" className="ia-editor__agregar"
-        onClick={() => onChange({
-          ...valor,
-          preguntas: [...valor.preguntas, { enunciado: '', opciones: ['', '', '', ''], indiceCorrecta: 0, explicacion: '' }],
-        })}>
-        + Pregunta
       </button>
     </div>
   );

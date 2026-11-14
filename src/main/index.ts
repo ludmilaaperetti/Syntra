@@ -252,6 +252,7 @@ import { GuardarContenidoSesion } from './logicaPersistente/gestionDeSesionEstud
 import { ImportarContenidoDesdeMaterial } from './logicaPersistente/gestionDeSesionEstudio/importarContenidoDesdeMaterial';
 import { SesionesEstudio } from './administracionDePersistencia/sesionesEstudio';
 import { ProcesoSesionEstudio } from './logicaNoPersistente/procesoSesionEstudio/procesoSesionEstudio';
+import { CANAL_SALIDA_BLOQUEADA } from './logicaNoPersistente/procesoSesionEstudio/practicaActiva';
 import { DocumentoSesionEstudio } from './logicaNoPersistente/procesoSesionEstudio/documentoSesionEstudio';
 import { registerSesionesEstudioIpc } from './ipc/sesionesEstudio.ipc';
 
@@ -270,8 +271,20 @@ import { registrarIpcIA } from './ipc/ia.ipc';
 import { GeneradorMaterialIA } from './logicaNoPersistente/ia/generadorMaterialIA';
 import { GuardarMaterialIA } from './logicaPersistente/gestionDeMaterialIA/guardarMaterialIA';
 import { ListarMaterialesIA } from './logicaPersistente/gestionDeMaterialIA/listarMaterialesIA';
+import { ObtenerMaterialIA } from './logicaPersistente/gestionDeMaterialIA/obtenerMaterialIA';
+import { EditarMapaMentalIA } from './logicaPersistente/gestionDeMaterialIA/editarMapaMentalIA';
+import { EliminarMaterialIA } from './logicaPersistente/gestionDeMaterialIA/eliminarMaterialIA';
+import { ListarIntentosCuestionario, ResponderCuestionario } from './logicaPersistente/gestionDeMaterialIA/intentosCuestionario';
 import { MaterialIA } from './administracionDePersistencia/materialIA';
 import { registerMaterialIAIpc } from './ipc/materialIA.ipc';
+import { AsistenteChat } from './logicaNoPersistente/ia/asistenteChat';
+import { ListarConversacionesIA } from './logicaPersistente/gestionDeChatIA/listarConversacionesIA';
+import { ObtenerConversacionIA } from './logicaPersistente/gestionDeChatIA/obtenerConversacionIA';
+import { GuardarIntercambioIA } from './logicaPersistente/gestionDeChatIA/guardarIntercambioIA';
+import { RenombrarConversacionIA } from './logicaPersistente/gestionDeChatIA/renombrarConversacionIA';
+import { EliminarConversacionIA } from './logicaPersistente/gestionDeChatIA/eliminarConversacionIA';
+import { ChatIA } from './administracionDePersistencia/chatIA';
+import { registerChatIAIpc } from './ipc/chatIA.ipc';
 
 let mainWindow: BrowserWindow | null = null;
 let procesoSesion: ProcesoSesionEstudio | null = null;
@@ -676,6 +689,7 @@ function wireDependencies(): ProcesoSesionEstudio {
   registrarIpcIA(ia);
 
   // Material con IA: la IA propone, el usuario revisa en la pantalla previa y recién ahí se guarda.
+  const obtenerMaterialIA = new ObtenerMaterialIA(persistencia);
   const materialIA = new MaterialIA(
     obtenerArchivo,
     almacenamiento,
@@ -686,12 +700,38 @@ function wireDependencies(): ProcesoSesionEstudio {
     ia.cola,
     new GuardarMaterialIA(persistencia),
     new ListarMaterialesIA(persistencia),
+    obtenerMaterialIA,
+    new EliminarMaterialIA(persistencia),
+    new ResponderCuestionario(persistencia, obtenerMaterialIA),
+    new ListarIntentosCuestionario(persistencia),
+    new EditarMapaMentalIA(persistencia, obtenerMaterialIA),
   );
   registerMaterialIAIpc(materialIA);
+
+  // Chat con IA: usa el mismo router (Luna → Gemini → Gemma) y la misma cola; las conversaciones se guardan.
+  const chatIA = new ChatIA(
+    new AsistenteChat(ia.router),
+    ia.cola,
+    new ListarConversacionesIA(persistencia),
+    new ObtenerConversacionIA(persistencia),
+    new GuardarIntercambioIA(persistencia),
+    new RenombrarConversacionIA(persistencia),
+    new EliminarConversacionIA(persistencia),
+  );
+  registerChatIAIpc(chatIA);
   // Una sola cola para toda la IA: al cerrar se cancela todo lo que esté en curso.
   cancelarIA = () => ia.cola.cancelarTodo();
 
   return proceso;
+}
+
+// Avisa a la pantalla que se intentó cerrar la app durante una sesión de Práctica activa.
+function avisarSalidaBloqueada(): void {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.send(CANAL_SALIDA_BLOQUEADA, procesoSesion?.obtenerSnapshot() ?? null);
 }
 
 function createWindow(): void {
@@ -710,6 +750,12 @@ function createWindow(): void {
   });
 
   mainWindow.on('ready-to-show', () => mainWindow?.show());
+  // Práctica activa: mientras no se cumpla el tiempo de la sesión, la ventana no se cierra.
+  mainWindow.on('close', (event) => {
+    if (cerrando || !procesoSesion?.salidaBloqueada()) return;
+    event.preventDefault();
+    avisarSalidaBloqueada();
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -798,6 +844,12 @@ app.on('window-all-closed', () => {
 // Cierre ordenado: libera los bloqueos de edición y recién después cierra el pool.
 app.on('before-quit', (event) => {
   if (cerrando) return;
+  // Práctica activa sin cumplir el tiempo: tampoco se sale con Cmd+Q / el menú.
+  if (procesoSesion?.salidaBloqueada()) {
+    event.preventDefault();
+    avisarSalidaBloqueada();
+    return;
+  }
   event.preventDefault();
   cerrando = true;
 

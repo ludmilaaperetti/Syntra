@@ -1,17 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CartelError } from '../comunes/cartelError';
 import { PantallaPrevia } from './pantallaPrevia';
 import {
   NOMBRE_TIPO_IA,
+  RUTA_TIPO_IA,
+  type MaterialIA,
   type ProgresoIA,
   type PropuestaIA,
   type TipoMaterialIA,
 } from '../../types/ia';
+import { mensajeError } from '../../pages/metodos/utilidadesMetodosIA';
 import '../../styles/ia.css';
 
 interface GenerarConIAProps {
   archivo: { id: number; nombre: string; extension: string | null };
   onCerrar: () => void;
+  // Desde Métodos (por ejemplo, Resúmenes) ya se sabe qué generar: no se muestra la elección.
+  tipoFijo?: TipoMaterialIA;
 }
 
 type Paso = 'elegir' | 'generando' | 'revisar' | 'listo';
@@ -25,9 +31,11 @@ const EJEMPLOS: Record<TipoMaterialIA, string> = {
 };
 
 // Elegir qué generar (+ indicaciones opcionales) → progreso con Cancelar → pantalla previa → guardado.
-export function GenerarConIA({ archivo, onCerrar }: GenerarConIAProps) {
+export function GenerarConIA({ archivo, onCerrar, tipoFijo }: GenerarConIAProps) {
+  const navigate = useNavigate();
   const [paso, setPaso] = useState<Paso>('elegir');
-  const [tipo, setTipo] = useState<TipoMaterialIA>('resumen');
+  const [tipo, setTipo] = useState<TipoMaterialIA>(tipoFijo ?? 'resumen');
+  const [guardado, setGuardado] = useState<MaterialIA | null>(null);
   const [preferencias, setPreferencias] = useState('');
   const [progreso, setProgreso] = useState<ProgresoIA | null>(null);
   const [propuesta, setPropuesta] = useState<PropuestaIA | null>(null);
@@ -57,14 +65,18 @@ export function GenerarConIA({ archivo, onCerrar }: GenerarConIAProps) {
         tipo,
         preferencias: preferencias.trim() || undefined,
       });
-      if (r.ok) {
+      if (r.ok && r.propuesta.idMaterialIA) {
+        // Cuestionario: ya está guardado y se abre para resolver (no tiene pantalla previa).
+        navigate(`${RUTA_TIPO_IA.cuestionario}/${r.propuesta.idMaterialIA}/resolver`);
+        onCerrar();
+      } else if (r.ok) {
         setPropuesta(r.propuesta);
         setPaso('revisar');
       } else {
         setPaso('elegir'); // canceló
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '') : 'No se pudo generar.');
+      setError(mensajeError(e, 'No se pudo generar.'));
       setPaso('elegir');
     } finally {
       trabajoId.current = null;
@@ -95,8 +107,12 @@ export function GenerarConIA({ archivo, onCerrar }: GenerarConIAProps) {
 
         {paso === 'elegir' && (
           <div className="ia-elegir">
-            <p className="ia-elegir__texto">¿Qué querés que arme la IA con este archivo?</p>
-            <div className="ia-elegir__opciones" role="radiogroup" aria-label="Tipo de material">
+            {tipoFijo ? (
+              <p className="ia-elegir__texto">Se va a generar un {NOMBRE_TIPO_IA[tipoFijo].toLowerCase()} con este archivo.</p>
+            ) : (
+              <p className="ia-elegir__texto">¿Qué querés que arme la IA con este archivo?</p>
+            )}
+            {!tipoFijo && <div className="ia-elegir__opciones" role="radiogroup" aria-label="Tipo de material">
               {TIPOS.map((t) => (
                 <button
                   key={t}
@@ -109,7 +125,13 @@ export function GenerarConIA({ archivo, onCerrar }: GenerarConIAProps) {
                   {NOMBRE_TIPO_IA[t]}
                 </button>
               ))}
-            </div>
+            </div>}
+            {tipo === 'cuestionario' && (
+              <p className="ia-elegir__nota">
+                Mezcla preguntas de opción múltiple, para completar eligiendo y para completar escribiendo.
+                Se abre para resolver apenas esté listo; las respuestas se ven al final.
+              </p>
+            )}
             <label className="ia-elegir__indicaciones">
               Indicaciones para la IA (opcional)
               <textarea
@@ -141,15 +163,31 @@ export function GenerarConIA({ archivo, onCerrar }: GenerarConIAProps) {
         {paso === 'revisar' && propuesta && (
           <PantallaPrevia
             propuesta={propuesta}
-            onGuardado={() => setPaso('listo')}
+            onGuardado={(material) => {
+              setGuardado(material);
+              setPaso('listo');
+            }}
             onDescartado={onCerrar}
           />
         )}
 
         {paso === 'listo' && (
           <div className="ia-elegir">
-            <p className="ia-elegir__texto">Listo, se guardó el {NOMBRE_TIPO_IA[propuesta!.tipo].toLowerCase()}.</p>
-            <button type="button" className="visor-boton" onClick={onCerrar}>Cerrar</button>
+            <p className="ia-elegir__texto">
+              Listo, se guardó el {NOMBRE_TIPO_IA[propuesta!.tipo].toLowerCase()}. Lo vas a encontrar en Métodos.
+            </p>
+            <div className="ia-elegir__acciones">
+              {guardado && (
+                <button
+                  type="button"
+                  className="visor-boton"
+                  onClick={() => navigate(`${RUTA_TIPO_IA[guardado.tipo]}/${guardado.idMaterialIA}`)}
+                >
+                  Ver en Métodos
+                </button>
+              )}
+              <button type="button" className="visor-boton visor-boton--contorno" onClick={onCerrar}>Cerrar</button>
+            </div>
           </div>
         )}
       </div>

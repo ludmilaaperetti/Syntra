@@ -10,11 +10,18 @@ export const NOMBRE_TIPO_IA: Record<TipoMaterialIA, string> = {
   mapaMental: 'Mapa mental',
 };
 
+// Pantalla de Métodos donde se ve cada tipo guardado.
+export const RUTA_TIPO_IA: Record<TipoMaterialIA, string> = {
+  resumen: '/resumenes',
+  cuestionario: '/cuestionarios',
+  mapaMental: '/mapas-mentales',
+};
+
 // El router informa qué IA respondió; si es una que no está acá, se muestra tal cual.
 const NOMBRES_PROVEEDOR: Record<string, string> = {
-  azure: 'Luna (Azure)',
+  luna: 'Luna (Azure)',
   gemini: 'Gemini',
-  ollama: 'Gemma (sin internet)',
+  gemma: 'Gemma (sin internet)',
 };
 export const nombreProveedorIA = (proveedor: string) => NOMBRES_PROVEEDOR[proveedor] ?? proveedor;
 
@@ -24,17 +31,60 @@ export interface Resumen {
   secciones: { titulo: string; contenido: string }[];
 }
 
-export interface Pregunta {
+// ---------- Cuestionarios ----------
+
+export type TipoPregunta = 'opcion_multiple' | 'completar_seleccion' | 'completar_escrito';
+
+export const HUECO = '___';
+
+// Así llega al front: sin la respuesta correcta ni la explicación (se ven recién al corregir).
+export interface PreguntaParaResolver {
+  tipo: TipoPregunta;
   enunciado: string;
   opciones: string[];
-  indiceCorrecta: number;
+  tema: string;
+}
+
+export interface CuestionarioParaResolver {
+  titulo: string;
+  preguntas: PreguntaParaResolver[];
+}
+
+// Índice de la opción elegida, texto escrito o null si quedó en blanco.
+export type RespuestaUsuario = number | string | null;
+
+export interface PreguntaCorregida extends PreguntaParaResolver {
+  respuestaUsuario: RespuestaUsuario;
+  correcta: boolean;
+  respuestaCorrecta: string;
   explicacion: string;
 }
 
-export interface Cuestionario {
-  titulo: string;
-  preguntas: Pregunta[];
+export interface TemaAReforzar {
+  tema: string;
+  errores: number;
+  total: number;
 }
+
+export interface ResultadoCuestionario {
+  idIntento: number;
+  preguntas: PreguntaCorregida[];
+  correctas: number;
+  total: number;
+  temasAReforzar: TemaAReforzar[];
+}
+
+export interface IntentoCuestionario {
+  idIntento: number;
+  idMaterialIA: number;
+  respuestas: RespuestaUsuario[];
+  correctas: number;
+  total: number;
+  temasAReforzar: TemaAReforzar[];
+  fecha: string;
+}
+
+// ---------- Mapas mentales ----------
 
 export interface NodoMapa {
   id: string;
@@ -47,9 +97,12 @@ export interface MapaMental {
   nodos: NodoMapa[];
 }
 
+// ---------- Material guardado ----------
+
+// Resúmenes y mapas se revisan en la pantalla previa; los cuestionarios no (se verían las respuestas).
 export interface ContenidoPorTipo {
   resumen: Resumen;
-  cuestionario: Cuestionario;
+  cuestionario: CuestionarioParaResolver;
   mapaMental: MapaMental;
 }
 
@@ -62,12 +115,15 @@ export interface PropuestaIA {
   tipo: TipoMaterialIA;
   contenido: ContenidoIA;
   proveedores: string[];
+  // Solo en cuestionarios: ya quedó guardado y se abre para resolver.
+  idMaterialIA?: number;
 }
 
 export interface MaterialIA {
   idMaterialIA: number;
   idUsuario: number;
   idArchivo: number | null;
+  nombreArchivo: string | null;
   tipo: TipoMaterialIA;
   titulo: string;
   contenido: ContenidoIA;
@@ -88,9 +144,14 @@ export interface MaterialIAApi {
     Promise<{ ok: true; propuesta: PropuestaIA } | { ok: false; cancelado: true }>;
   descartarMaterialIA(datos: { trabajoId: string }): Promise<boolean>;
   guardarMaterialIA(datos: { trabajoId: string; contenido: ContenidoIA }): Promise<MaterialIA>;
-  listarMaterialesIA(datos?: { idArchivo?: number }): Promise<MaterialIA[]>;
+  listarMaterialesIA(datos?: { idArchivo?: number; tipo?: TipoMaterialIA }): Promise<MaterialIA[]>;
+  obtenerMaterialIA(datos: { idMaterialIA: number }): Promise<MaterialIA>;
+  eliminarMaterialIA(datos: { idMaterialIA: number }): Promise<boolean>;
+  responderCuestionario(datos: { idMaterialIA: number; respuestas: RespuestaUsuario[] }): Promise<ResultadoCuestionario>;
+  listarIntentosCuestionario(datos: { idMaterialIA: number }): Promise<IntentoCuestionario[]>;
+  // Guarda un mapa mental editado (se valida en el main con el mismo esquema que usa la IA).
+  editarMapaMental(datos: { idMaterialIA: number; contenido: MapaMental }): Promise<MaterialIA>;
   // De la API general de IA (cola): los que usa el front de Material con IA.
   cancelar(idTrabajo: string): Promise<boolean>;
   onProgreso(callback: (progreso: ProgresoIA) => void): () => void;
 }
-

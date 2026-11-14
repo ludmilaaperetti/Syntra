@@ -11,6 +11,7 @@ export const TAREAS = [
   'plan',
   'mapaMental', // mismo nombre que usa Material con IA (pantalla previa y tabla materiales_ia)
   'materias',
+  'chat', // Chat con IA (preguntas libres, sin material)
 ] as const;
 export type Tarea = (typeof TAREAS)[number]; // 'resumen' | 'cuestionario' | ...
 

@@ -29,6 +29,34 @@ export type GuardarMaterialIADTO = z.infer<typeof guardarMaterialIASchema>;
 
 export const listarMaterialesIASchema = z.object({
   idArchivo: z.number().int().positive().optional(),
+  tipo: z.enum(TIPOS_MATERIAL_IA, { error: 'Tipo de material inválido.' }).optional(),
 });
 
 export type ListarMaterialesIADTO = z.infer<typeof listarMaterialesIASchema>;
+
+// Abrir, eliminar o ver el historial de un material guardado.
+export const materialIASchema = z.object({
+  idMaterialIA: z.number().int().positive(),
+});
+
+export type MaterialIADTO = z.infer<typeof materialIASchema>;
+
+// Respuestas al resolver un cuestionario: índice de la opción, texto escrito o null (en blanco).
+export const responderCuestionarioSchema = z.object({
+  idMaterialIA: z.number().int().positive(),
+  respuestas: z.array(z.union([
+    z.number().int().min(0),
+    z.string().max(200, { error: 'Una respuesta es demasiado larga.' }),
+    z.null(),
+  ])).max(200),
+});
+
+export type ResponderCuestionarioDTO = z.infer<typeof responderCuestionarioSchema>;
+
+// Guardar un mapa mental editado. El contenido se valida con el esquema del mapa en el caso de uso.
+export const editarMapaMentalIASchema = z.object({
+  idMaterialIA: z.number().int().positive(),
+  contenido: z.unknown(),
+});
+
+export type EditarMapaMentalIADTO = z.infer<typeof editarMapaMentalIASchema>;

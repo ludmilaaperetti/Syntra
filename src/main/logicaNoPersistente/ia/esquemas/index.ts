@@ -8,6 +8,7 @@ export * from './resumen';
 export * from './cuestionario';
 export * from './mapaMental';
 export * from './flashcards';
+export * from './chat';
 
 // Un esquema por tipo de Material con IA. El registro de TODAS las tareas de IA (con su prompt
 // y su JSON Schema) está en ../tareas.ts.

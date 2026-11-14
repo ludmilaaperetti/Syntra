@@ -40,6 +40,19 @@ export const iaApi = {
   descartarMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:descartar', datos),
   guardarMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:guardar', datos),
   listarMaterialesIA: (datos?: unknown) => ipcRenderer.invoke('materialIA:listar', datos),
+  obtenerMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:obtener', datos),
+  eliminarMaterialIA: (datos: unknown) => ipcRenderer.invoke('materialIA:eliminar', datos),
+  // Cuestionarios: corrige el main (las respuestas correctas llegan recién con el resultado).
+  responderCuestionario: (datos: unknown) => ipcRenderer.invoke('materialIA:responderCuestionario', datos),
+  listarIntentosCuestionario: (datos: unknown) => ipcRenderer.invoke('materialIA:listarIntentos', datos),
+  editarMapaMental: (datos: unknown) => ipcRenderer.invoke('materialIA:editarMapaMental', datos),
+
+  // Chat con IA: las conversaciones quedan guardadas. Para cortar una respuesta: cancelar(trabajoId).
+  enviarMensajeChat: (datos: unknown) => ipcRenderer.invoke('chatIA:enviar', datos),
+  listarConversacionesIA: () => ipcRenderer.invoke('chatIA:listar'),
+  obtenerConversacionIA: (datos: unknown) => ipcRenderer.invoke('chatIA:obtener', datos),
+  renombrarConversacionIA: (datos: unknown) => ipcRenderer.invoke('chatIA:renombrar', datos),
+  eliminarConversacionIA: (datos: unknown) => ipcRenderer.invoke('chatIA:eliminar', datos),
 };
 
 export type ApiIA = typeof iaApi;

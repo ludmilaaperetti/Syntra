@@ -1,8 +1,8 @@
 // src/main/logicaNoPersistente/ia/tareas.ts
 // Registro ÚNICO de tareas: para sumar una (guía, plan, materias...) agregás su esquema zod,
 // su prompt en prompts.ts y una entrada acá. El router y la cola no cambian.
-import { aJsonSchema, cuestionarioSchema, flashcardsSchema, mapaMentalSchema, resumenSchema } from './esquemas';
-import { SISTEMA_CUESTIONARIO, SISTEMA_FLASHCARDS, SISTEMA_MAPA_MENTAL, SISTEMA_RESUMEN } from './prompts';
+import { aJsonSchema, cuestionarioSchema, flashcardsSchema, mapaMentalSchema, respuestaChatSchema, resumenSchema } from './esquemas';
+import { SISTEMA_CHAT, SISTEMA_CUESTIONARIO, SISTEMA_FLASHCARDS, SISTEMA_MAPA_MENTAL, SISTEMA_RESUMEN } from './prompts';
 import type { Esquema } from './tipos';
 
 export interface DefTarea {
@@ -16,6 +16,7 @@ export const TAREAS_IA = {
   cuestionario: { sistema: SISTEMA_CUESTIONARIO, esquema: cuestionarioSchema, esquemaJson: aJsonSchema(cuestionarioSchema) },
   mapaMental: { sistema: SISTEMA_MAPA_MENTAL, esquema: mapaMentalSchema, esquemaJson: aJsonSchema(mapaMentalSchema) },
   flashcards: { sistema: SISTEMA_FLASHCARDS, esquema: flashcardsSchema, esquemaJson: aJsonSchema(flashcardsSchema) },
+  chat: { sistema: SISTEMA_CHAT, esquema: respuestaChatSchema, esquemaJson: aJsonSchema(respuestaChatSchema) },
 } satisfies Record<string, DefTarea>;
 
 export type TareaImplementada = keyof typeof TAREAS_IA;

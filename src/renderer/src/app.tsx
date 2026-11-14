@@ -24,6 +24,13 @@ import { PanelPerfil } from "./pages/perfil/panelPerfil";
 import { AjustesPage } from "./pages/ajustes/ajustesPage";
 import { MetodosPage } from "./pages/metodos/metodosPage";
 import { RepeticionEspaciadaPage } from "./pages/metodos/repeticionEspaciadaPage";
+import { MaterialesIAPage } from "./pages/metodos/materialesIAPage";
+import { ResumenIAPage } from "./pages/metodos/resumenIAPage";
+import { MapaMentalIAPage } from "./pages/metodos/mapaMentalIAPage";
+import { ChatIAPage } from "./pages/chat/chatIAPage";
+import { ProveedorBloqueoSesion } from "./components/sesionEstudio/bloqueoPracticaActiva";
+import { CuestionarioIAPage } from "./pages/metodos/cuestionarioIAPage";
+import { ResolverCuestionarioPage } from "./pages/metodos/resolverCuestionarioPage";
 import { DeckFlashcardsPage, EstudiarFlashcardsPage, FlashcardsPage } from "./pages/flashcards/flashcardsPage";
 import { CronogramaPage } from "./pages/cronograma/cronogramaPage";
 import { ProyectosPage } from "./pages/proyectos/proyectosPage";
@@ -50,6 +57,8 @@ export default function App() {
   return (
     <ProveedorAvisos>
     <ProveedorSpotify>
+    {/* Práctica activa: mientras dura la sesión no se puede salir de ella (ver bloqueoPracticaActiva.tsx). */}
+    <ProveedorBloqueoSesion>
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/registro" element={<RegistrarUsuarioPage />} />
@@ -75,6 +84,13 @@ export default function App() {
         <Route path="/flashcards/:deckId" element={<DeckFlashcardsPage />} />
         <Route path="/flashcards/:deckId/estudiar" element={<EstudiarFlashcardsPage />} />
         <Route path="/repeticion-espaciada" element={<RepeticionEspaciadaPage />} />
+        <Route path="/resumenes" element={<MaterialesIAPage key="resumen" tipo="resumen" />} />
+        <Route path="/resumenes/:id" element={<ResumenIAPage />} />
+        <Route path="/cuestionarios" element={<MaterialesIAPage key="cuestionario" tipo="cuestionario" />} />
+        <Route path="/cuestionarios/:id" element={<CuestionarioIAPage />} />
+        <Route path="/cuestionarios/:id/resolver" element={<ResolverCuestionarioPage />} />
+        <Route path="/mapas-mentales" element={<MaterialesIAPage key="mapaMental" tipo="mapaMental" />} />
+        <Route path="/mapas-mentales/:id" element={<MapaMentalIAPage />} />
         <Route path="/proyectos" element={<ProyectosPage />} />
         <Route path="/proyectos/:id" element={<ProyectoDetallePage />} />
         <Route path="/proyectos/:id/eventos" element={<EventosPage />} />
@@ -83,9 +99,12 @@ export default function App() {
         <Route path="/sesiones/nueva" element={<CrearSesionEstudioPage />} />
         <Route path="/sesiones/:idSesion" element={<SesionEstudioPage />} />
         <Route path="/estadisticas" element={<EstadisticasPage />} />
+        {/* Una sola ruta con :id opcional: al crear una conversación la pantalla no se vuelve a montar. */}
+        <Route path="/chat/:id?" element={<ChatIAPage />} />
         <Route path="/proximamente/:id" element={<Proximamente />} />
       </Routes>
       <PanelPerfil />
+    </ProveedorBloqueoSesion>
     </ProveedorSpotify>
     </ProveedorAvisos>
   );
