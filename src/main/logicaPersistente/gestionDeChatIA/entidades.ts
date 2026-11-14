@@ -15,6 +15,8 @@ export interface MensajeIA {
   texto: string;
   // Qué IA respondió (luna, gemini o gemma); null en los mensajes del usuario.
   proveedor: string | null;
+  // Imágenes que adjuntó el usuario (JPEG en base64). Vacío en las respuestas de la IA.
+  imagenes: string[];
   fecha: Date;
 }
 

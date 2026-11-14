@@ -3,6 +3,7 @@
 // cuando la app no puede sacar el texto: PDF escaneado → cada página dibujada en un canvas; foto → tal cual.
 // Se hace acá porque el renderer ya tiene pdf.js y un canvas (el main no).
 import { pdfjs } from 'react-pdf';
+import { imagenAJpeg, sinPrefijoDataUrl } from './imagenes';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
@@ -12,8 +13,6 @@ const ANCHO_OBJETIVO = 1500; // px: alcanza para leer tablas chicas sin mandar i
 const CALIDAD_JPEG = 0.85;
 
 export const EXTENSIONES_IMAGEN = ['png', 'jpg', 'jpeg', 'webp'];
-
-const sinPrefijo = (dataUrl: string) => dataUrl.slice(dataUrl.indexOf(',') + 1);
 
 async function pdfAImagenes(datos: ArrayBuffer): Promise<string[]> {
   const pdf = await pdfjs.getDocument({ data: new Uint8Array(datos) }).promise;
@@ -32,37 +31,12 @@ async function pdfAImagenes(datos: ArrayBuffer): Promise<string[]> {
       contexto.fillStyle = '#ffffff'; // fondo blanco: el JPEG no tiene transparencia
       contexto.fillRect(0, 0, canvas.width, canvas.height);
       await pagina.render({ canvas, canvasContext: contexto, viewport }).promise;
-      imagenes.push(sinPrefijo(canvas.toDataURL('image/jpeg', CALIDAD_JPEG)));
+      imagenes.push(sinPrefijoDataUrl(canvas.toDataURL('image/jpeg', CALIDAD_JPEG)));
       pagina.cleanup();
     }
     return imagenes;
   } finally {
     await pdf.destroy();
-  }
-}
-
-// Una foto se pasa a JPEG y se achica si es muy grande (las fotos del celular pesan mucho).
-async function imagenAJpeg(archivo: File): Promise<string> {
-  const url = URL.createObjectURL(archivo);
-  try {
-    const imagen = new Image();
-    await new Promise<void>((resolver, rechazar) => {
-      imagen.onload = () => resolver();
-      imagen.onerror = () => rechazar(new Error('No se pudo leer la imagen.'));
-      imagen.src = url;
-    });
-    const escala = Math.min(1, 2000 / Math.max(imagen.naturalWidth, imagen.naturalHeight));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(imagen.naturalWidth * escala);
-    canvas.height = Math.round(imagen.naturalHeight * escala);
-    const contexto = canvas.getContext('2d');
-    if (!contexto) throw new Error('No se pudo preparar la imagen.');
-    contexto.fillStyle = '#ffffff';
-    contexto.fillRect(0, 0, canvas.width, canvas.height);
-    contexto.drawImage(imagen, 0, 0, canvas.width, canvas.height);
-    return sinPrefijo(canvas.toDataURL('image/jpeg', CALIDAD_JPEG));
-  } finally {
-    URL.revokeObjectURL(url);
   }
 }
 

@@ -8,6 +8,7 @@ export interface DatosIntercambioIA {
   idConversacion: number | null;
   tituloNueva: string;
   pregunta: string;
+  imagenes?: string[]; // las que adjuntó el usuario a la pregunta
   respuesta: string;
   proveedor: string;
 }
@@ -39,10 +40,10 @@ export class GuardarIntercambioIA {
       const idConversacion = conversacion[0].id_conversacion;
 
       const mensajes = await tx.ejecutar(
-        `INSERT INTO mensajes_ia (id_conversacion, rol, texto, proveedor)
-         VALUES ($1, 'usuario', $2, NULL), ($1, 'ia', $3, $4)
+        `INSERT INTO mensajes_ia (id_conversacion, rol, texto, proveedor, imagenes)
+         VALUES ($1, 'usuario', $2, NULL, $5::jsonb), ($1, 'ia', $3, $4, '[]'::jsonb)
          RETURNING *`,
-        [idConversacion, datos.pregunta, datos.respuesta, datos.proveedor],
+        [idConversacion, datos.pregunta, datos.respuesta, datos.proveedor, JSON.stringify(datos.imagenes ?? [])],
       );
       const [pregunta, respuesta] = mensajes.map(materializarMensajeIA).sort((a, b) => a.idMensaje - b.idMensaje);
       return { conversacion: materializarConversacionIA(conversacion[0]), mensajes: [pregunta, respuesta] };

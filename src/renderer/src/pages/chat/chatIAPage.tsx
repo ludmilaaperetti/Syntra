@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type KeyboardEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check, Copy, MessageCircle, PanelLeft, PanelLeftClose, Pencil, SendHorizontal, Sparkles, Square, Trash2, X } from 'lucide-react';
+import { Check, Copy, ImagePlus, MessageCircle, PanelLeft, PanelLeftClose, Pencil, SendHorizontal, Sparkles, Square, Trash2, X } from 'lucide-react';
 import { PlantillaLayout } from '../plantillaLayout/plantillaLayout';
 import { CartelError } from '../../components/comunes/cartelError';
 import { TextoConFormulas } from '../../components/comunes/textoConFormulas';
@@ -8,6 +8,7 @@ import { usarAvisos } from '../../hooks/usarAvisos';
 import { nombreProveedorIA } from '../../types/ia';
 import type { ConversacionIA, MensajeIA } from '../../types/chatIA';
 import { mensajeError } from '../metodos/utilidadesMetodosIA';
+import { TIPOS_IMAGEN_ACEPTADOS, imagenAJpeg, imagenComoSrc } from '../../utils/imagenes';
 import '../../styles/chatIA.css';
 
 const SUGERENCIAS = [
@@ -21,7 +22,12 @@ const SUGERENCIAS = [
 interface Pendiente {
   trabajoId: string;
   texto: string;
+  imagenes: string[];
 }
+
+// Tienen que coincidir con gestionDeChatIA/dto.ts.
+const MAX_IMAGENES = 4;
+const LADO_MAXIMO_IMAGEN = 1280; // px: alcanza para leer texto de una captura y pesa poco
 
 function formatearDia(fecha: string): string {
   const d = new Date(fecha);
@@ -51,6 +57,11 @@ export function ChatIAPage() {
   const [renombrando, setRenombrando] = useState<{ id: number; titulo: string } | null>(null);
   const [copiado, setCopiado] = useState<number | null>(null);
   const [historialAbierto, setHistorialAbierto] = useState(false);
+  // Imágenes listas para mandar con el próximo mensaje (JPEG en base64).
+  const [adjuntos, setAdjuntos] = useState<string[]>([]);
+  const [preparandoImagen, setPreparandoImagen] = useState(false);
+  const [imagenAmpliada, setImagenAmpliada] = useState<string | null>(null);
+  const entradaImagenRef = useRef<HTMLInputElement>(null);
 
   const montado = useRef(true);
   // Al crear una conversación ya tenemos sus mensajes: no hace falta volver a pedirlos al cambiar la ruta.
@@ -104,6 +115,14 @@ export function ChatIAPage() {
     };
   }, [idConversacion]);
 
+  // La imagen ampliada se cierra con Escape.
+  useEffect(() => {
+    if (!imagenAmpliada) return;
+    const alPresionar = (e: globalThis.KeyboardEvent) => e.key === 'Escape' && setImagenAmpliada(null);
+    window.addEventListener('keydown', alPresionar);
+    return () => window.removeEventListener('keydown', alPresionar);
+  }, [imagenAmpliada]);
+
   // El historial se cierra con Escape (si no se está renombrando una conversación).
   useEffect(() => {
     if (!historialAbierto) return;
@@ -130,21 +149,69 @@ export function ChatIAPage() {
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+    // La barra de desplazamiento aparece solo cuando el texto ya no entra (si no, se veían las flechitas).
+    el.style.overflowY = el.scrollHeight > 200 ? 'auto' : 'hidden';
   }, [texto]);
+
+  // Imágenes elegidas, pegadas o arrastradas: se pasan a JPEG chico y quedan como adjuntos del próximo mensaje.
+  async function agregarImagenes(archivos: File[]) {
+    const imagenes = archivos.filter((a) => a.type.startsWith('image/'));
+    if (imagenes.length === 0) return;
+    const lugar = MAX_IMAGENES - adjuntos.length;
+    if (lugar <= 0) return setError(`Podés adjuntar hasta ${MAX_IMAGENES} imágenes por mensaje.`);
+    if (imagenes.length > lugar) setError(`Podés adjuntar hasta ${MAX_IMAGENES} imágenes por mensaje: se agregaron las primeras.`);
+    setPreparandoImagen(true);
+    try {
+      const nuevas = await Promise.all(imagenes.slice(0, lugar).map((a) => imagenAJpeg(a, LADO_MAXIMO_IMAGEN)));
+      if (montado.current) setAdjuntos((actuales) => [...actuales, ...nuevas].slice(0, MAX_IMAGENES));
+    } catch (e) {
+      if (montado.current) setError(mensajeError(e, 'No se pudo leer la imagen.'));
+    } finally {
+      if (montado.current) setPreparandoImagen(false);
+      entradaRef.current?.focus();
+    }
+  }
+
+  // Ctrl+V de una captura en el cuadro de texto.
+  function alPegar(evento: ClipboardEvent<HTMLTextAreaElement>) {
+    const archivos = [...evento.clipboardData.files].filter((a) => a.type.startsWith('image/'));
+    if (archivos.length === 0) return;
+    evento.preventDefault();
+    void agregarImagenes(archivos);
+  }
+
+  function alSoltar(evento: DragEvent<HTMLElement>) {
+    if (!evento.dataTransfer.files.length) return;
+    evento.preventDefault();
+    if (!pendiente) void agregarImagenes([...evento.dataTransfer.files]);
+  }
 
   async function enviar(contenido = texto) {
     const pregunta = contenido.trim();
-    if (!pregunta || pendiente) return;
-    const trabajo: Pendiente = { trabajoId: crypto.randomUUID(), texto: pregunta };
+    const imagenes = adjuntos;
+    if ((!pregunta && imagenes.length === 0) || pendiente || preparandoImagen) return;
+    const trabajo: Pendiente = { trabajoId: crypto.randomUUID(), texto: pregunta, imagenes };
     setPendiente(trabajo);
     setTexto('');
+    setAdjuntos([]);
     setError('');
 
+    // Si se cancela o falla, la pregunta y las imágenes vuelven al cuadro para editarlas o reenviarlas.
+    const devolver = () => {
+      setTexto(pregunta);
+      setAdjuntos(imagenes);
+    };
+
     try {
-      const r = await window.api.enviarMensajeChat({ trabajoId: trabajo.trabajoId, idConversacion, texto: pregunta });
+      const r = await window.api.enviarMensajeChat({
+        trabajoId: trabajo.trabajoId,
+        idConversacion,
+        texto: pregunta,
+        ...(imagenes.length ? { imagenes } : {}),
+      });
       if (!montado.current) return;
       if (!r.ok) {
-        setTexto(pregunta); // canceló: la pregunta vuelve al cuadro para editarla o reenviarla
+        devolver();
         return;
       }
       setMensajes((actuales) => [...actuales, ...r.mensajes]);
@@ -155,7 +222,7 @@ export function ChatIAPage() {
       }
     } catch (e) {
       if (!montado.current) return;
-      setTexto(pregunta);
+      devolver();
       setError(mensajeError(e, 'La IA no pudo responder. Probá de nuevo en un rato.'));
     } finally {
       if (montado.current) setPendiente(null);
@@ -221,6 +288,7 @@ export function ChatIAPage() {
 
   function nuevaConversacion() {
     setTexto('');
+    setAdjuntos([]);
     setError('');
     setHistorialAbierto(false);
     if (idConversacion != null) navigate('/chat');
@@ -235,7 +303,8 @@ export function ChatIAPage() {
   const ocupado = pendiente !== null;
   const vacia = !cargando && mensajes.length === 0 && !pendiente;
   // Los brillitos pasan del centro a la barra de arriba en cuanto se empieza a escribir.
-  const iniciada = !vacia || texto.trim().length > 0;
+  const iniciada = !vacia || texto.trim().length > 0 || adjuntos.length > 0;
+  const puedeEnviar = (texto.trim().length > 0 || adjuntos.length > 0) && !preparandoImagen;
 
   return (
     <PlantillaLayout titulo="IA" idActivo="chat" usuario={{ nombre: 'Usuario' }}>
@@ -347,7 +416,7 @@ export function ChatIAPage() {
           </>
         )}
 
-        <section className="chat-ia__principal">
+        <section className="chat-ia__principal" onDragOver={(e) => e.preventDefault()} onDrop={alSoltar}>
           {error && <CartelError mensaje={error} onCerrar={() => setError('')} />}
 
           <div className="chat-ia__mensajes" aria-live="polite">
@@ -370,7 +439,10 @@ export function ChatIAPage() {
 
             {mensajes.map((m) =>
               m.rol === 'usuario' ? (
-                <div key={m.idMensaje} className="chat-ia__burbuja chat-ia__burbuja--usuario">{m.texto}</div>
+                <div key={m.idMensaje} className="chat-ia__burbuja chat-ia__burbuja--usuario">
+                  <ImagenesMensaje imagenes={m.imagenes} onAmpliar={setImagenAmpliada} />
+                  {m.texto}
+                </div>
               ) : (
                 <div key={m.idMensaje} className="chat-ia__respuesta">
                   <TextoConFormulas className="chat-ia__texto" texto={m.texto} />
@@ -387,7 +459,10 @@ export function ChatIAPage() {
 
             {pendiente && (
               <>
-                <div className="chat-ia__burbuja chat-ia__burbuja--usuario">{pendiente.texto}</div>
+                <div className="chat-ia__burbuja chat-ia__burbuja--usuario">
+                  <ImagenesMensaje imagenes={pendiente.imagenes} onAmpliar={setImagenAmpliada} />
+                  {pendiente.texto}
+                </div>
                 <div className="chat-ia__respuesta chat-ia__respuesta--pensando" role="status">
                   <span className="chat-ia__puntos" aria-hidden="true"><i /><i /><i /></span>
                   Pensando…
@@ -397,33 +472,95 @@ export function ChatIAPage() {
             <div ref={finRef} />
           </div>
 
+          {(adjuntos.length > 0 || preparandoImagen) && (
+            <div className="chat-ia__adjuntos" aria-label="Imágenes para enviar">
+              {adjuntos.map((imagen, i) => (
+                <span key={i} className="chat-ia__adjunto">
+                  <img src={imagenComoSrc(imagen)} alt={`Imagen ${i + 1} para enviar`} />
+                  <button
+                    type="button"
+                    onClick={() => setAdjuntos((actuales) => actuales.filter((_, j) => j !== i))}
+                    title="Quitar imagen"
+                    aria-label={`Quitar imagen ${i + 1}`}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+              {preparandoImagen && <span className="chat-ia__adjunto chat-ia__adjunto--cargando" role="status">Cargando…</span>}
+            </div>
+          )}
+
           <form className="chat-ia__entrada" onSubmit={alEnviar}>
             <textarea
               ref={entradaRef}
               value={texto}
               rows={1}
               maxLength={8000}
-              placeholder="Escribí tu pregunta…"
+              placeholder={adjuntos.length ? "Preguntá algo sobre la imagen…" : "Escribí tu pregunta…"}
               aria-label="Mensaje para la IA"
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={alTeclear}
+              onPaste={alPegar}
               disabled={cargando}
+            />
+            <button
+              type="button"
+              className="chat-ia__adjuntar"
+              onClick={() => entradaImagenRef.current?.click()}
+              disabled={ocupado || cargando || adjuntos.length >= MAX_IMAGENES}
+              title={adjuntos.length >= MAX_IMAGENES ? `Hasta ${MAX_IMAGENES} imágenes por mensaje` : 'Adjuntar imagen'}
+              aria-label="Adjuntar imagen"
+            >
+              <ImagePlus size={19} />
+            </button>
+            <input
+              ref={entradaImagenRef}
+              type="file"
+              accept={TIPOS_IMAGEN_ACEPTADOS}
+              multiple
+              hidden
+              onChange={(e) => {
+                const archivos = [...(e.target.files ?? [])];
+                e.target.value = '';
+                void agregarImagenes(archivos);
+              }}
             />
             {ocupado ? (
               <button type="button" className="chat-ia__boton chat-ia__boton--cancelar" onClick={cancelar} title="Detener respuesta" aria-label="Detener respuesta">
                 <Square size={16} />
               </button>
             ) : (
-              <button type="submit" className="chat-ia__boton" disabled={!texto.trim() || cargando} title="Enviar" aria-label="Enviar">
+              <button type="submit" className="chat-ia__boton" disabled={!puedeEnviar || cargando} title="Enviar" aria-label="Enviar">
                 <SendHorizontal size={18} />
               </button>
             )}
           </form>
           <p className="chat-ia__ayuda">
-            <MessageCircle size={13} /> Enter para enviar · Shift + Enter para un salto de línea. La IA puede equivocarse: revisá lo importante.
+            <MessageCircle size={13} /> Enter para enviar · Shift + Enter para un salto de línea · Podés pegar o arrastrar imágenes. La IA puede equivocarse: revisá lo importante.
           </p>
         </section>
       </div>
+
+      {imagenAmpliada && (
+        <div className="chat-ia__ampliada" role="dialog" aria-label="Imagen ampliada" onClick={() => setImagenAmpliada(null)}>
+          <img src={imagenComoSrc(imagenAmpliada)} alt="Imagen adjunta" />
+        </div>
+      )}
     </PlantillaLayout>
+  );
+}
+
+// Miniaturas de las imágenes que el usuario adjuntó a un mensaje; al tocarlas se ven grandes.
+function ImagenesMensaje({ imagenes, onAmpliar }: { imagenes: string[]; onAmpliar: (imagen: string) => void }) {
+  if (imagenes.length === 0) return null;
+  return (
+    <span className="chat-ia__imagenes">
+      {imagenes.map((imagen, i) => (
+        <button key={i} type="button" onClick={() => onAmpliar(imagen)} title="Ver imagen" aria-label={`Ver imagen ${i + 1}`}>
+          <img src={imagenComoSrc(imagen)} alt={`Imagen adjunta ${i + 1}`} />
+        </button>
+      ))}
+    </span>
   );
 }

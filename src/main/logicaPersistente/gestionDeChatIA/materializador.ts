@@ -17,6 +17,7 @@ export function materializarMensajeIA(fila: any): MensajeIA {
     rol: fila.rol,
     texto: fila.texto,
     proveedor: fila.proveedor ?? null,
+    imagenes: Array.isArray(fila.imagenes) ? fila.imagenes : [],
     fecha: fila.fecha,
   };
 }

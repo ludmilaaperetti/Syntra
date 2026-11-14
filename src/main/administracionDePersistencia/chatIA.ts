@@ -48,19 +48,26 @@ export class ChatIA {
     // Se lee el historial también para comprobar que la conversación es del usuario.
     const historial = idConversacion == null ? [] : (await this.obtenerCasoUso.ejecutar(idUsuario, idConversacion)).mensajes;
 
+    const imagenes = datos.imagenes ?? [];
     const respuesta = await this.cola.add(datos.trabajoId, (ctx) =>
       this.asistente.responder(
-        historial.map((m) => ({ rol: m.rol, texto: m.texto })),
-        datos.texto,
+        // De los mensajes viejos solo va el texto; si tenían imágenes, se avisa para que la IA tenga contexto.
+        historial.map((m) => ({
+          rol: m.rol,
+          texto: m.imagenes.length ? `${m.texto} [adjuntó ${m.imagenes.length === 1 ? 'una imagen' : `${m.imagenes.length} imágenes`}]`.trim() : m.texto,
+        })),
+        datos.texto || (imagenes.length === 1 ? 'Explicame qué hay en esta imagen.' : 'Explicame qué hay en estas imágenes.'),
         ctx.signal,
+        imagenes,
       ),
     );
 
     return this.guardarCasoUso.ejecutar({
       idUsuario,
       idConversacion,
-      tituloNueva: tituloDesdeMensaje(datos.texto),
+      tituloNueva: datos.texto ? tituloDesdeMensaje(datos.texto) : 'Consulta con imagen',
       pregunta: datos.texto,
+      imagenes,
       respuesta: respuesta.texto,
       proveedor: respuesta.proveedor,
     });

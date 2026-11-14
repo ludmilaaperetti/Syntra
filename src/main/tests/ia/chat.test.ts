@@ -62,3 +62,27 @@ test('chat: el título sale de la primera pregunta, cortado en una palabra', () 
   expect(largo.endsWith('…')).toBe(true);
   expect(largo.includes(' …')).toBe(false);
 });
+
+test('chat: las imágenes del mensaje llegan al router; sin imágenes no se manda el campo', async () => {
+  const pedidos: { imagenes?: string[] }[] = [];
+  const router = {
+    generar: async (_t: string, pedido: { imagenes?: string[]; esquema: { parse(d: unknown): unknown } }) => {
+      pedidos.push(pedido);
+      return { dato: pedido.esquema.parse({ respuesta: 'Es una célula.' }), proveedor: 'gptMini', ms: 1, intentos: 1 };
+    },
+  };
+  const asistente = new AsistenteChat(router as never);
+  await asistente.responder([], '¿Qué es esto?', undefined, ['AAAA']);
+  await asistente.responder([], 'Hola');
+  expect(pedidos[0].imagenes).toEqual(['AAAA']);
+  expect('imagenes' in pedidos[1]).toBe(false);
+});
+
+test('chat: se puede mandar solo una imagen, pero no un mensaje vacío', async () => {
+  const { enviarMensajeChatSchema } = await import('../../logicaPersistente/gestionDeChatIA/dto');
+  const trabajoId = '0b1e7f1e-7c0a-4e4b-9a57-2f7a3c0b1d11';
+  const imagen = 'A'.repeat(200);
+  expect(enviarMensajeChatSchema.safeParse({ trabajoId, texto: '', imagenes: [imagen] }).success).toBe(true);
+  expect(enviarMensajeChatSchema.safeParse({ trabajoId, texto: '   ' }).success).toBe(false);
+  expect(enviarMensajeChatSchema.safeParse({ trabajoId, texto: 'x', imagenes: [imagen, imagen, imagen, imagen, imagen] }).success).toBe(false);
+});
