@@ -2,7 +2,7 @@ import { test, expect } from 'vitest';
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AlmacenClaves, ErrorClaves } from '../../logicaNoPersistente/ia/proveedores/almacenClaves';
+import { AlmacenClaves, ErrorClaves } from '../../servicios/ia/almacenClaves';
 
 // ---------- claves ----------
 const safeFalso = (disponible = true) => ({

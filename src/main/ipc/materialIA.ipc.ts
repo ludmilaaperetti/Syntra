@@ -1,63 +1,36 @@
 import { ipcMain } from 'electron';
-import { MaterialIA } from '../administracionDePersistencia/materialIA';
-import {
-  editarMapaMentalIASchema,
-  generarMaterialIASchema,
-  guardarMaterialIASchema,
-  listarMaterialesIASchema,
-  materialIASchema,
-  responderCuestionarioSchema,
-  trabajoIASchema,
-} from '../logicaPersistente/gestionDeMaterialIA/dto';
-import { esAbort } from '../logicaNoPersistente/ia/errores';
+import type { MaterialIA } from '../administracionDePersistencia/materialIA';
 
-// Material con IA: generar desde un archivo → pantalla previa → guardar (los cuestionarios se guardan solos).
-// Después: ver, eliminar y resolver los cuestionarios.
-// El progreso ('ia:progreso') y cancelar ('ia:cancelar') son los de toda la IA: hay una sola cola.
+// Todo lo de IA sobre material de estudio, en un solo archivo: Material con IA (resumen, cuestionario, mapa mental),
+// flashcards, guía de preguntas y materias desde el plan de estudio. También ver, eliminar y editar lo guardado,
+// y resolver los cuestionarios (se corrigen en el main).
+// El IPC no valida ni importa nada de logicaPersistente: pasa los datos a MaterialIA, que los valida con los
+// esquemas de logicaNoPersistente/ia/esquemas.ts. El progreso ('ia:progreso') y cancelar ('ia:cancelar') son
+// los de toda la IA: hay una sola cola. Los nombres de los canales no cambiaron.
 export function registerMaterialIAIpc(materialIA: MaterialIA): void {
-  // Cancelar no es un error: se devuelve { ok: false, cancelado: true } para que el front no muestre un cartel.
-  ipcMain.handle('materialIA:generar', async (_event, datos: unknown) => {
-    const validado = generarMaterialIASchema.parse(datos);
-    try {
-      return { ok: true, propuesta: await materialIA.generar(validado) };
-    } catch (error) {
-      if (esAbort(error)) return { ok: false, cancelado: true };
-      throw error;
-    }
-  });
+  // Material con IA: generar desde un archivo → pantalla previa → guardar.
+  ipcMain.handle('materialIA:generar', (_e, datos: unknown) => materialIA.generar(datos));
+  ipcMain.handle('materialIA:guardar', (_e, datos: unknown) => materialIA.guardar(datos));
+  ipcMain.handle('materialIA:listar', (_e, datos: unknown) => materialIA.listar(datos));
+  ipcMain.handle('materialIA:descartar', (_e, datos: unknown) => materialIA.descartar(datos));
 
-  ipcMain.handle('materialIA:descartar', async (_event, datos: unknown) =>
-    materialIA.descartar(trabajoIASchema.parse(datos))
-  );
+  // Flashcards con IA (las tarjetas se revisan en el modal y se guardan por el flujo normal de Flashcards).
+  ipcMain.handle('flashcardsIA:generar', (_e, datos: unknown) => materialIA.generarFlashcards(datos));
 
-  ipcMain.handle('materialIA:guardar', async (_event, datos: unknown) =>
-    materialIA.guardar(guardarMaterialIASchema.parse(datos))
-  );
+  // Guía de preguntas: generar → editar → guardar en la carpeta elegida.
+  ipcMain.handle('guiaPreguntas:generar', (_e, datos: unknown) => materialIA.generarGuia(datos));
+  ipcMain.handle('guiaPreguntas:guardar', (_e, datos: unknown) => materialIA.guardarGuia(datos));
 
-  ipcMain.handle('materialIA:listar', async (_event, datos: unknown) =>
-    materialIA.listar(listarMaterialesIASchema.parse(datos ?? {}))
-  );
+  // Lo guardado: ver, eliminar, editar mapas mentales y resolver cuestionarios.
+  ipcMain.handle('materialIA:obtener', (_e, datos: unknown) => materialIA.obtener(datos));
+  ipcMain.handle('materialIA:eliminar', (_e, datos: unknown) => materialIA.eliminar(datos));
+  ipcMain.handle('materialIA:editarMapaMental', (_e, datos: unknown) => materialIA.editarMapaMental(datos));
+  ipcMain.handle('materialIA:responderCuestionario', (_e, datos: unknown) => materialIA.responderCuestionario(datos));
+  ipcMain.handle('materialIA:listarIntentos', (_e, datos: unknown) => materialIA.listarIntentos(datos));
 
-  ipcMain.handle('materialIA:obtener', async (_event, datos: unknown) =>
-    materialIA.obtener(materialIASchema.parse(datos))
-  );
+  // Para cerrar el modal de flashcards o de la guía sin guardar (mismo efecto que materialIA:descartar).
+  ipcMain.handle('materialIAExtra:descartar', (_e, datos: unknown) => materialIA.descartar(datos));
 
-  // Mapas mentales: guardar lo que el usuario editó (ideas nuevas, eliminadas o cambiadas).
-  ipcMain.handle('materialIA:editarMapaMental', async (_event, datos: unknown) =>
-    materialIA.editarMapaMental(editarMapaMentalIASchema.parse(datos))
-  );
-
-  ipcMain.handle('materialIA:eliminar', async (_event, datos: unknown) => {
-    await materialIA.eliminar(materialIASchema.parse(datos));
-    return true;
-  });
-
-  // Cuestionarios: se corrige en el main y se guarda el intento.
-  ipcMain.handle('materialIA:responderCuestionario', async (_event, datos: unknown) =>
-    materialIA.responderCuestionario(responderCuestionarioSchema.parse(datos))
-  );
-
-  ipcMain.handle('materialIA:listarIntentos', async (_event, datos: unknown) =>
-    materialIA.listarIntentos(materialIASchema.parse(datos))
-  );
+  // Materias desde el plan de estudio con IA.
+  ipcMain.handle('materias:leerPlanIA', (_e, datos: unknown) => materialIA.leerPlan(datos));
 }

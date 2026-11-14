@@ -16,6 +16,7 @@
     "test:jest": "jest",
     "test:watch": "vitest",
     "test:ia": "vitest run src/main/tests/ia",
+    "ia:modelo": "ollama pull gemma4:e2b",
     "db:demo": "docker cp db/demo/borrar_demo.sql app_postgres:/tmp/borrar_demo.sql && docker cp db/demo/datos_demo.sql app_postgres:/tmp/datos_demo.sql && docker exec app_postgres sh -c \"psql -q -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -f /tmp/borrar_demo.sql -f /tmp/datos_demo.sql\"",
     "db:demo:borrar": "docker cp db/demo/borrar_demo.sql app_postgres:/tmp/borrar_demo.sql && docker exec app_postgres sh -c \"psql -q -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB -f /tmp/borrar_demo.sql\""
   },
@@ -59,7 +60,7 @@
     "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^4.3.1",
     "@vladmandic/face-api": "^1.7.15",
-    "electron": "^44.10.2",
+    "electron": "^45.2.3",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
     "jest": "^30.5.2",

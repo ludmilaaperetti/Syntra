@@ -1,5 +1,5 @@
 // src/main/logicaNoPersistente/ia/colaEjecucion.ts
-import { ErrorAbortado } from './errores';
+import { ErrorAbortado } from './errores.js';
 
 export interface ContextoTarea {
   signal: AbortSignal;

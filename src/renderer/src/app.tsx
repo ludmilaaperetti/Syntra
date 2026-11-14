@@ -40,6 +40,7 @@ import { EstadisticasPage } from "./pages/estadisticas/estadisticasPage";
 import { SesionesEstudioPage } from "./pages/sesionesEstudio/sesionesEstudioPage";
 import { CrearSesionEstudioPage } from "./pages/sesionesEstudio/crearSesionEstudioPage";
 import { SesionEstudioPage } from "./pages/sesionesEstudio/sesionEstudioPage";
+import { GuiasPreguntasPage } from "./pages/guiaPreguntas/guiaPreguntasPage";
 import { ProveedorAvisos } from "./hooks/usarAvisos";
 import { ProveedorSpotify } from "./hooks/usarSpotify";
 
@@ -102,6 +103,7 @@ export default function App() {
         {/* Una sola ruta con :id opcional: al crear una conversación la pantalla no se vuelve a montar. */}
         <Route path="/chat/:id?" element={<ChatIAPage />} />
         <Route path="/proximamente/:id" element={<Proximamente />} />
+        <Route path="/guias-preguntas" element={<GuiasPreguntasPage />} />
       </Routes>
       <PanelPerfil />
     </ProveedorBloqueoSesion>

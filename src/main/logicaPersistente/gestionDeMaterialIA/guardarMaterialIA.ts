@@ -13,6 +13,12 @@ export interface DatosGuardarMaterialIA {
 }
 
 // Guarda el material que el usuario confirmó en la pantalla previa.
+// Algunos tipos (flashcards, materias) no traen título: se usa uno genérico para no dejar la columna vacía.
+function tituloDe(contenido: object): string {
+  const titulo = (contenido as { titulo?: unknown }).titulo;
+  return typeof titulo === 'string' && titulo.trim() ? titulo : 'Material con IA';
+}
+
 export class GuardarMaterialIA {
   constructor(private readonly persistencia: Persistencia) {}
 
@@ -25,7 +31,7 @@ export class GuardarMaterialIA {
         datos.idUsuario,
         datos.idArchivo,
         datos.tipo,
-        datos.contenido.titulo,
+        tituloDe(datos.contenido),
         JSON.stringify(datos.contenido),
         datos.proveedores,
       ],

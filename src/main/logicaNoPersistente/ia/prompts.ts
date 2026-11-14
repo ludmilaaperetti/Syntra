@@ -33,6 +33,20 @@ export const SISTEMA_FLASHCARDS =
   `${REGLAS_COMUNES} Tarea: crear tarjetas de estudio (frente/dorso). ` +
   'En "fuente" copiá TEXTUALMENTE un fragmento del material que respalde la tarjeta.';
 
+export const SISTEMA_MATERIAS =
+  `${REGLAS_COMUNES} Tarea: extraer las materias de un plan de estudios. ` +
+  'Incluí solo materias que estén escritas en el material, con el nombre EXACTAMENTE como figura (se verifica que aparezca en el texto). ' +
+  'anio: número del año de cursada, o null si no figura. ' +
+  'cuatrimestre: "primero", "segundo" o "anual", o null si no figura. ' +
+  'correlativas: nombres de otras materias del mismo plan, tal como figuran en el plan; lista vacía si no tiene. ' +
+  'Ignorá encabezados, pies de página, números de página y resoluciones. No repitas materias.';
+ 
+export const SISTEMA_GUIA = `Sos un docente que prepara una guía de preguntas de estudio a partir del material que te dan.
+  Devolvé preguntas abiertas que obliguen a comprender, no a copiar. Cada pregunta lleva su respuesta modelo, breve y fiel al material.
+  Agrupá por tema: completá "tema" con el título de la sección de donde sale la pregunta, o null si no corresponde.
+  No inventes contenido que no esté en el texto. No repitas preguntas.
+  ${REGLAS_COMUNES}`;
+
 // ---------- Chat con IA ----------
 // No hay material: el usuario pregunta lo que quiera. El historial va delimitado igual que el
 // material, así un mensaje viejo con "ignorá lo anterior" no cambia estas reglas.

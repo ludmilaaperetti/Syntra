@@ -26,7 +26,7 @@ const generarMapa = (router: RouterModelos, cola: ColaEjecucion, id: string, pre
 
 const MAPA = JSON.stringify(mapaValido);
 
-test('generador: si Luna falla responde Gemini, y el resultado pasa zod', async () => {
+test('generador: si GptMini falla responde Gemini, y el resultado pasa zod', async () => {
   const luna = falso('luna', 'online', [new Error('caída')]);
   const gemini = falso('gemini', 'online', ['```json\n' + MAPA + '\n```']);
   const { contenido, proveedores } = await generarMapa(routerReal([luna, gemini]), new ColaEjecucion(1), 'g1');

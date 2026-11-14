@@ -176,6 +176,8 @@ import {
 } from './logicaPersistente/gestionDeProyectos/portadaProyecto';
 import { PortadasProyectos } from './administracionDePersistencia/portadasProyectos';
 import { registerPortadasProyectosIpc } from './ipc/portadasProyectos.ipc';
+import { ServicioIA } from './logicaNoPersistente/ia/servicioIA.js';
+import { GuardarGuiaPreguntas } from './logicaPersistente/gestionDeMaterialIA/guardarGuiaPreguntas';
 
 // Estadísticas
 import { ResumenProyectos } from './logicaPersistente/gestionDeEstadisticas/resumenProyectos';
@@ -266,7 +268,7 @@ import { ClienteSpotify } from './logicaNoPersistente/spotify/clienteSpotify';
 import { registerSpotifyIpc } from './ipc/spotify.ipc';
 
 // Inteligencia artificial (router, proveedores, claves y cola) y Material con IA
-import { crearServiciosIA } from './logicaNoPersistente/ia';
+import { crearServiciosIA, type ServiciosIA } from './logicaNoPersistente/ia/index.js';
 import { registrarIpcIA } from './ipc/ia.ipc';
 import { GeneradorMaterialIA } from './logicaNoPersistente/ia/generadorMaterialIA';
 import { GuardarMaterialIA } from './logicaPersistente/gestionDeMaterialIA/guardarMaterialIA';
@@ -285,9 +287,13 @@ import { RenombrarConversacionIA } from './logicaPersistente/gestionDeChatIA/ren
 import { EliminarConversacionIA } from './logicaPersistente/gestionDeChatIA/eliminarConversacionIA';
 import { ChatIA } from './administracionDePersistencia/chatIA';
 import { registerChatIAIpc } from './ipc/chatIA.ipc';
+// junto a los otros imports de ipc
+import { registrarIpcPlanArchivo } from './ipc/planArchivo.ipc';
 
 let mainWindow: BrowserWindow | null = null;
 let procesoSesion: ProcesoSesionEstudio | null = null;
+// Servicios de IA (router, claves, cola y Ollama). Se guardan para apagar Ollama al cerrar la app.
+let iaServicios: ServiciosIA | null = null;
 
 // Se guardan mientras están en pantalla: si no, Windows puede perder el clic.
 const avisosVisibles = new Set<Notification>();
@@ -682,21 +688,27 @@ function wireDependencies(): ProcesoSesionEstudio {
     new AutenticacionSpotify(configSpotify, (url) => shell.openExternal(url))
   );
   registerSpotifyIpc(clienteSpotify);
-  // Inteligencia artificial: router (Luna → Gemini → Gemma), claves y una sola cola para todo.
+  // Inteligencia artificial: router (GptMini → Gemini → Gemma), claves, Ollama y una sola cola para todo.
+  // Se crea UNA sola vez: registrarIpcIA no puede llamarse dos veces (ipcMain.handle falla con el mismo canal).
   const ia = crearServiciosIA({
     alProgreso: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:progreso', e)),
+    alOllama: (e) => BrowserWindow.getAllWindows().forEach((w) => w.webContents.send('ia:ollama', e)),
   });
-  registrarIpcIA(ia);
+  iaServicios = ia;
+  // El IPC de la IA (generar, cancelar, claves, Ollama) habla con ServicioIA, no con los servicios sueltos.
+  const servicioIA = new ServicioIA(ia);
+  registrarIpcIA(servicioIA);
 
   // Material con IA: la IA propone, el usuario revisa en la pantalla previa y recién ahí se guarda.
   const obtenerMaterialIA = new ObtenerMaterialIA(persistencia);
+  const generadorMaterial = new GeneradorMaterialIA(ia.router, {
+    maxTokens: Number(process.env.IA_MAX_TOKENS_FRAGMENTO) || 3000,
+    solapamientoTokens: 150,
+  });
   const materialIA = new MaterialIA(
-    obtenerArchivo,
+    archivos,
     almacenamiento,
-    new GeneradorMaterialIA(ia.router, {
-      maxTokens: Number(process.env.IA_MAX_TOKENS_FRAGMENTO) || 3000,
-      solapamientoTokens: 150,
-    }),
+    generadorMaterial,
     ia.cola,
     new GuardarMaterialIA(persistencia),
     new ListarMaterialesIA(persistencia),
@@ -705,10 +717,13 @@ function wireDependencies(): ProcesoSesionEstudio {
     new ResponderCuestionario(persistencia, obtenerMaterialIA),
     new ListarIntentosCuestionario(persistencia),
     new EditarMapaMentalIA(persistencia, obtenerMaterialIA),
+    new GuardarGuiaPreguntas(archivos, nodos, persistencia),
+    servicioIA,
   );
   registerMaterialIAIpc(materialIA);
+  registrarIpcPlanArchivo(generadorMaterial, ia.cola);
 
-  // Chat con IA: usa el mismo router (Luna → Gemini → Gemma) y la misma cola; las conversaciones se guardan.
+  // Chat con IA: usa el mismo router (GptMini → Gemma) y la misma cola; las conversaciones se guardan.
   const chatIA = new ChatIA(
     new AsistenteChat(ia.router),
     ia.cola,
@@ -805,6 +820,7 @@ app.whenReady().then(async () => {
 
   // Los handlers IPC se registran antes de crear la ventana.
   procesoSesion = wireDependencies();
+
   const recordatorios = new EnviarRecordatoriosPendientes(new Persistencia(pool));
   let recordatoriosEnCurso = false;
   const enviarRecordatorios = async (): Promise<void> => {
@@ -821,6 +837,8 @@ app.whenReady().then(async () => {
   void enviarRecordatorios();
   setInterval(() => void enviarRecordatorios(), 15 * 60 * 1000);
   createWindow();
+  // Inicia Ollama si está apagado y revisa el modelo. Sin await: no frena el arranque de la app.
+  void iaServicios?.gestorOllama.preparar();
   await procesoSesion.arrancar();
 
   app.on('activate', () => {
@@ -830,10 +848,6 @@ app.whenReady().then(async () => {
   console.error('[startup] Falló el arranque:', err);
   app.quit();
 });
-
-const carpeta = process.env.SYNTRA_DATA_DIR;           // ej: ./electron-data-1
-if (carpeta) app.setPath('userData', carpeta);
-
 
 app.on('window-all-closed', () => {
   // El pool se cierra en before-quit, después de liberar los bloqueos de edición.
@@ -853,7 +867,9 @@ app.on('before-quit', (event) => {
   event.preventDefault();
   cerrando = true;
 
+  // Corta lo que la IA tenga en curso y apaga el Ollama que inició la app (si ya estaba corriendo, no lo toca).
   cancelarIA?.();
+  iaServicios?.gestorOllama.detener();
 
   void (async () => {
     // Primero se frena el barrido de la sincronización: si no, sigue consultando la base ya cerrada.

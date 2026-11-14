@@ -1,7 +1,7 @@
-// src/main/logicaNoPersistente/ia/routerModelos.ts
-import { ErrorAbortado, ErrorProveedor, ErrorRouter, clasificar } from './errores';
-import type { Causa } from './errores';
-import type { PedidoGeneracion, ProveedorModelo, ResultadoGeneracion, Tarea } from './tipos';
+// src/main/logicaNoPersistente/ia/RouterModelos.ts
+import { ErrorAbortado, ErrorProveedor, ErrorRouter, clasificar } from './errores.js';
+import type { Causa } from './errores.js';
+import type { PedidoGeneracion, ProveedorModelo, ResultadoGeneracion, Tarea } from './tipos.js';
 
 export interface OpcionesRouter {
   /** Cadena por tarea: el primero es el principal, los demás son respaldo. */

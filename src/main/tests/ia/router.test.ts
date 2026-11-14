@@ -13,7 +13,7 @@ test('usa el principal si anda', async () => {
   expect(gem.llamadas).toBe(0);
 });
 
-test('cae a Gemini si Luna da 429, y a Gemma si ambos fallan', async () => {
+test('cae a Gemini si GptMini da 429, y a Gemma si ambos fallan', async () => {
   const luna = falso('luna', 'online', [new ErrorProveedor('cuota', 'luna', 'x')]);
   const gem = falso('gemini', 'online', [new ErrorProveedor('red', 'gemini', 'x')]);
   const gemma = falso('gemma', 'local', ['{"x":3}']);

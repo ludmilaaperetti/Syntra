@@ -19,7 +19,9 @@ export const RUTA_TIPO_IA: Record<TipoMaterialIA, string> = {
 
 // El router informa qué IA respondió; si es una que no está acá, se muestra tal cual.
 const NOMBRES_PROVEEDOR: Record<string, string> = {
-  luna: 'Luna (Azure)',
+  gptMini: 'GptMini (Azure)',
+  azure: 'GptMini (Azure)',
+  luna: 'Luna (Azure)', // materiales guardados antes del cambio a GptMini
   gemini: 'Gemini',
   gemma: 'Gemma (sin internet)',
 };
