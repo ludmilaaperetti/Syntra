@@ -12,6 +12,7 @@ export const TAREAS = [
   'mapaMental', // mismo nombre que usa Material con IA (pantalla previa y tabla materiales_ia)
   'materias',
   'chat', // Chat con IA (preguntas libres, sin material)
+  'transcripcionPlan', // pasar a texto un plan de estudios escaneado o en foto (lee imágenes)
 ] as const;
 export type Tarea = (typeof TAREAS)[number]; // 'resumen' | 'cuestionario' | ...
 
@@ -40,12 +41,14 @@ export interface PedidoGeneracion<T> {
   esquema: Esquema<T>; // valida la respuesta
   esquemaJson: object; // el mismo esquema como JSON Schema (para el modelo)
   signal?: AbortSignal; // para cancelar
+  /** Imágenes para que el modelo las lea (JPEG o PNG en base64, sin el prefijo data:). */
+  imagenes?: string[];
 }
 
 /** Lo que recibe un proveedor: no necesita el validador, solo el JSON Schema. */
 export type PedidoCrudo = Pick<
   PedidoGeneracion<unknown>,
-  'sistema' | 'usuario' | 'esquemaJson' | 'signal'
+  'sistema' | 'usuario' | 'esquemaJson' | 'signal' | 'imagenes'
 >;
 
 export interface ResultadoGeneracion<T> {

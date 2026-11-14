@@ -46,6 +46,9 @@ export const iaApi = {
   responderCuestionario: (datos: unknown) => ipcRenderer.invoke('materialIA:responderCuestionario', datos),
   listarIntentosCuestionario: (datos: unknown) => ipcRenderer.invoke('materialIA:listarIntentos', datos),
   editarMapaMental: (datos: unknown) => ipcRenderer.invoke('materialIA:editarMapaMental', datos),
+  // Resúmenes como documento: se editan y se guardan como Word en Material › "Resúmenes".
+  generarResumenDocumento: (datos: unknown) => ipcRenderer.invoke('resumenIA:generar', datos),
+  guardarResumenDocumento: (datos: unknown) => ipcRenderer.invoke('resumenIA:guardar', datos),
 
   // Chat con IA: las conversaciones quedan guardadas. Para cortar una respuesta: cancelar(trabajoId).
   enviarMensajeChat: (datos: unknown) => ipcRenderer.invoke('chatIA:enviar', datos),

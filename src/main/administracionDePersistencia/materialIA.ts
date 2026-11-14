@@ -7,11 +7,13 @@ import { EditarMapaMentalIA } from '../logicaPersistente/gestionDeMaterialIA/edi
 import { ListarIntentosCuestionario, ResponderCuestionario } from '../logicaPersistente/gestionDeMaterialIA/intentosCuestionario';
 import { paraResolver } from '../logicaPersistente/gestionDeMaterialIA/corregirCuestionario';
 import { GuardarGuiaPreguntas } from '../logicaPersistente/gestionDeMaterialIA/guardarGuiaPreguntas';
+import { GuardarResumenIA } from '../logicaPersistente/gestionDeMaterialIA/guardarResumenIA';
 import {
   armarPreferencias,
   guiaPreguntasAHtml,
   nombreMazoDe,
   preguntasDeGuia,
+  resumenAHtml,
   tarjetasDePropuesta,
 } from '../logicaPersistente/gestionDeMaterialIA/propuestas';
 import type {
@@ -35,7 +37,9 @@ import {
   cuestionarioSchema,
   generarFlashcardsSchema,
   generarGuiaSchema,
+  generarResumenDocumentoSchema,
   guardarGuiaSchema,
+  guardarResumenDocumentoSchema,
   leerCuestionarioGuardado,
   leerPlanIASchema,
 } from '../logicaNoPersistente/ia/esquemas';
@@ -104,6 +108,7 @@ export class MaterialIA {
     private readonly guardarGuiaCasoUso: GuardarGuiaPreguntas,
     // Para el análisis del plan de estudio (no parte de un archivo, parte de un texto).
     private readonly servicioIA: ServicioIA,
+    private readonly guardarResumenCasoUso: GuardarResumenIA,
   ) {}
 
   /* ---------------- Material con IA (resumen, cuestionario, mapa mental) ---------------- */
@@ -214,6 +219,36 @@ export class MaterialIA {
     });
     // La propuesta ya no hace falta en memoria.
     if (d.trabajoId) this.pendientes.delete(d.trabajoId);
+    return { ok: true as const, archivo };
+  }
+
+  /* ---------------- Resumen como documento ---------------- */
+
+  // Igual que la guía: la IA arma el resumen, se devuelve como HTML editable y no se guarda nada.
+  async generarResumenDocumento(datos: unknown) {
+    const d = generarResumenDocumentoSchema.parse(datos);
+    return this.conCancelacion(async () => {
+      const propuesta = await this.generarPropuesta({
+        trabajoId: d.trabajoId,
+        idArchivo: d.idArchivo,
+        tipo: 'resumen',
+        ...(d.indicaciones ? { preferencias: d.indicaciones } : {}),
+      });
+      return {
+        ok: true as const,
+        trabajoId: propuesta.trabajoId,
+        nombreArchivo: `Resumen - ${nombreMazoDe(propuesta.fuente)}`,
+        html: resumenAHtml(propuesta.contenido),
+        proveedores: propuesta.proveedores,
+      };
+    });
+  }
+
+  // Guarda el resumen ya revisado/editado como Word en la carpeta "Resúmenes" de Material.
+  async guardarResumenDocumento(datos: unknown) {
+    const d = guardarResumenDocumentoSchema.parse(datos);
+    const archivo = await this.guardarResumenCasoUso.ejecutar({ nombre: d.nombre, html: d.html });
+    for (const trabajoId of d.trabajosIds ?? []) this.pendientes.delete(trabajoId);
     return { ok: true as const, archivo };
   }
 

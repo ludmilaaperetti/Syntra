@@ -141,6 +141,10 @@ export interface ProgresoIA {
   total?: number;
 }
 
+export type RespuestaResumenDocumento =
+  | { ok: true; trabajoId: string; nombreArchivo: string; html: string; proveedores: string[] }
+  | { ok: false; cancelado: true };
+
 export interface MaterialIAApi {
   generarMaterialIA(datos: { trabajoId: string; idArchivo: number; tipo: TipoMaterialIA; preferencias?: string }):
     Promise<{ ok: true; propuesta: PropuestaIA } | { ok: false; cancelado: true }>;
@@ -153,6 +157,9 @@ export interface MaterialIAApi {
   listarIntentosCuestionario(datos: { idMaterialIA: number }): Promise<IntentoCuestionario[]>;
   // Guarda un mapa mental editado (se valida en el main con el mismo esquema que usa la IA).
   editarMapaMental(datos: { idMaterialIA: number; contenido: MapaMental }): Promise<MaterialIA>;
+  // Resúmenes como documento editable que se guarda como Word en Material › "Resúmenes".
+  generarResumenDocumento(datos: { trabajoId: string; idArchivo: number; indicaciones?: string }): Promise<RespuestaResumenDocumento>;
+  guardarResumenDocumento(datos: { trabajosIds?: string[]; nombre: string; html: string }): Promise<{ ok: true; archivo: { id: number; nombre: string } }>;
   // De la API general de IA (cola): los que usa el front de Material con IA.
   cancelar(idTrabajo: string): Promise<boolean>;
   onProgreso(callback: (progreso: ProgresoIA) => void): () => void;

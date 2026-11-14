@@ -13,6 +13,7 @@ import {
   type Materias,
   resumenSchema,
   respuestaChatSchema,
+  transcripcionPlanSchema,
 } from './esquemas';
 import {
   SISTEMA_CUESTIONARIO,
@@ -22,6 +23,7 @@ import {
   SISTEMA_RESUMEN,
   SISTEMA_GUIA,
   SISTEMA_CHAT,
+  SISTEMA_TRANSCRIPCION_PLAN,
 } from './prompts';
 import type { Esquema } from './tipos';
 
@@ -101,6 +103,13 @@ export const TAREAS_IA = {
     esquema: respuestaChatSchema,
     esquemaJson: aJsonSchema(respuestaChatSchema),
     combinar: (partes) => respuestaChatSchema.parse(partes[0]),
+  },
+  // Plan de estudios escaneado: el modelo lee las imágenes de las páginas; no hay fragmentos.
+  transcripcionPlan: {
+    sistema: SISTEMA_TRANSCRIPCION_PLAN,
+    esquema: transcripcionPlanSchema,
+    esquemaJson: aJsonSchema(transcripcionPlanSchema),
+    combinar: (partes) => transcripcionPlanSchema.parse(partes[0]),
   },
 } satisfies Record<string, DefTarea>;
 

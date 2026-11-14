@@ -21,6 +21,10 @@ export function registerMaterialIAIpc(materialIA: MaterialIA): void {
   ipcMain.handle('guiaPreguntas:generar', (_e, datos: unknown) => materialIA.generarGuia(datos));
   ipcMain.handle('guiaPreguntas:guardar', (_e, datos: unknown) => materialIA.guardarGuia(datos));
 
+  // Resumen como documento: generar → editar → guardar como Word en Material › "Resúmenes".
+  ipcMain.handle('resumenIA:generar', (_e, datos: unknown) => materialIA.generarResumenDocumento(datos));
+  ipcMain.handle('resumenIA:guardar', (_e, datos: unknown) => materialIA.guardarResumenDocumento(datos));
+
   // Lo guardado: ver, eliminar, editar mapas mentales y resolver cuestionarios.
   ipcMain.handle('materialIA:obtener', (_e, datos: unknown) => materialIA.obtener(datos));
   ipcMain.handle('materialIA:eliminar', (_e, datos: unknown) => materialIA.eliminar(datos));

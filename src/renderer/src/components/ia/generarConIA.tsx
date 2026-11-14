@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CartelError } from '../comunes/cartelError';
 import { PantallaPrevia } from './pantallaPrevia';
+import { IndicadorIA } from '../materialIA/indicadorIA';
 import {
   NOMBRE_TIPO_IA,
   RUTA_TIPO_IA,
@@ -22,7 +23,8 @@ interface GenerarConIAProps {
 
 type Paso = 'elegir' | 'generando' | 'revisar' | 'listo';
 
-const TIPOS: TipoMaterialIA[] = ['resumen', 'cuestionario', 'mapaMental'];
+// Los resúmenes ya no pasan por acá: se generan como documento editable (ModalResumenIA), igual que las guías.
+const TIPOS: TipoMaterialIA[] = ['cuestionario', 'mapaMental'];
 
 const EJEMPLOS: Record<TipoMaterialIA, string> = {
   resumen: 'Ej.: nivel parcial, enfocado en las definiciones, más corto…',
@@ -34,7 +36,7 @@ const EJEMPLOS: Record<TipoMaterialIA, string> = {
 export function GenerarConIA({ archivo, onCerrar, tipoFijo }: GenerarConIAProps) {
   const navigate = useNavigate();
   const [paso, setPaso] = useState<Paso>('elegir');
-  const [tipo, setTipo] = useState<TipoMaterialIA>(tipoFijo ?? 'resumen');
+  const [tipo, setTipo] = useState<TipoMaterialIA>(tipoFijo ?? 'cuestionario');
   const [guardado, setGuardado] = useState<MaterialIA | null>(null);
   const [preferencias, setPreferencias] = useState('');
   const [progreso, setProgreso] = useState<ProgresoIA | null>(null);
@@ -87,10 +89,15 @@ export function GenerarConIA({ archivo, onCerrar, tipoFijo }: GenerarConIAProps)
     if (trabajoId.current) void window.api.cancelar(trabajoId.current);
   };
 
-  // "hechas" son las partes ya terminadas: mientras la IA trabaja en la primera, la barra está vacía.
+  // "hechas" son las partes ya terminadas; los archivos largos se mandan a la IA en varias partes.
   const hechas = progreso?.hechas ?? 0;
   const total = progreso?.total ?? 0;
-  const pct = total > 0 ? Math.round((hechas / total) * 100) : 0;
+  const detalleProgreso =
+    progreso?.estado === 'en_cola'
+      ? 'Esperando turno: hay otra generación en curso.'
+      : total > 1
+        ? `Parte ${Math.min(hechas + 1, total)} de ${total} · puede tardar un poco`
+        : 'Puede tardar un poco según el tamaño del material.';
 
   return (
     <div className="visor-overlay">
@@ -147,16 +154,10 @@ export function GenerarConIA({ archivo, onCerrar, tipoFijo }: GenerarConIAProps)
         )}
 
         {paso === 'generando' && (
-          <div className="ia-progreso" aria-live="polite">
-            <progress className="ia-progreso__barra" value={pct} max={100} />
-            <p className="ia-progreso__texto">
-              {!progreso || progreso.estado === 'en_cola'
-                ? 'Esperando turno…'
-                : total > 0
-                  ? `Listas ${hechas} de ${total} partes. La IA está trabajando…`
-                  : 'Leyendo el archivo y preparando el pedido…'}
-            </p>
-            <button type="button" className="visor-boton visor-boton--contorno" onClick={cancelar}>Cancelar</button>
+          // La misma animación que los modales de flashcards y guía de preguntas (siempre en movimiento).
+          <div className="ia-progreso">
+            <IndicadorIA mensaje={`Generando el ${NOMBRE_TIPO_IA[tipo].toLowerCase()}`} detalle={detalleProgreso} />
+            <button type="button" className="visor-boton visor-boton--contorno" onClick={cancelar}>Cancelar generación</button>
           </div>
         )}
 

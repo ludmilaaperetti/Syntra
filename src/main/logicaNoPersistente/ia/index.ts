@@ -61,8 +61,8 @@ export function crearServiciosIA(opciones: OpcionesServiciosIA = {}) {
     ollama,
   ];
 
-  // GptMini principal ('gptMini') → Gemma si no hay conexión (o fallan los dos)
-  const porDefecto = ['gptMini']; // , 'gemma'
+  // GptMini principal ('gptMini') → Gemma si no hay conexión, no hay clave de Azure o GptMini falla
+  const porDefecto = ['gptMini', 'gemma'];
   const cadenas = Object.fromEntries(TAREAS.map((t) => [t, porDefecto])) as Record<Tarea, string[]>;
 
   const router = new RouterModelos(proveedores, {

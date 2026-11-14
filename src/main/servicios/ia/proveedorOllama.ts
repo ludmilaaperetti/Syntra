@@ -67,7 +67,8 @@ export class ProveedorOllama implements ProveedorModelo {
           options: { temperature: 0.2 },
           messages: [
             { role: 'system', content: p.sistema },
-            { role: 'user', content: p.usuario },
+            // Ollama recibe las imágenes en base64 en el mismo mensaje (Gemma las lee).
+            { role: 'user', content: p.usuario, ...(p.imagenes?.length ? { images: p.imagenes } : {}) },
           ],
         }),
       });

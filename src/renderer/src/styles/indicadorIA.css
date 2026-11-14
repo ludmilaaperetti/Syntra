@@ -1,6 +1,7 @@
 /* src/renderer/src/styles/indicadorIA.css */
 .indicador-ia {
-  --ia-color: var(--color-primario, #2a8c7b);
+  /* Sale de la paleta activa: se ve con los colores de cualquier estilo que elija el usuario. */
+  --ia-color: var(--color-primary);
   display: grid;
   justify-items: center;
   gap: 10px;

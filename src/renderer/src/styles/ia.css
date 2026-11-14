@@ -86,23 +86,15 @@
 
 /* Progreso */
 
+/* Mientras genera: la animación de indicadorIA.css (en el centro) y "Cancelar generación" abajo. */
 .ia-progreso {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: var(--espacio-sm);
 }
 
-.ia-progreso__barra {
-  width: 100%;
-  height: 10px;
-  accent-color: var(--color-primary);
-}
-
-.ia-progreso__texto {
-  margin: 0;
-  font-size: var(--tamano-sm);
-  color: var(--color-text-secondary);
+.ia-progreso > .visor-boton {
+  align-self: flex-start;
 }
 
 /* Pantalla previa*/

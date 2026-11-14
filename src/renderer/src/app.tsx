@@ -25,6 +25,7 @@ import { AjustesPage } from "./pages/ajustes/ajustesPage";
 import { MetodosPage } from "./pages/metodos/metodosPage";
 import { RepeticionEspaciadaPage } from "./pages/metodos/repeticionEspaciadaPage";
 import { MaterialesIAPage } from "./pages/metodos/materialesIAPage";
+import { ResumenesPage } from "./pages/metodos/resumenesPage";
 import { ResumenIAPage } from "./pages/metodos/resumenIAPage";
 import { MapaMentalIAPage } from "./pages/metodos/mapaMentalIAPage";
 import { ChatIAPage } from "./pages/chat/chatIAPage";
@@ -85,7 +86,8 @@ export default function App() {
         <Route path="/flashcards/:deckId" element={<DeckFlashcardsPage />} />
         <Route path="/flashcards/:deckId/estudiar" element={<EstudiarFlashcardsPage />} />
         <Route path="/repeticion-espaciada" element={<RepeticionEspaciadaPage />} />
-        <Route path="/resumenes" element={<MaterialesIAPage key="resumen" tipo="resumen" />} />
+        {/* Los resúmenes son documentos en Material › "Resúmenes" (como las guías); /resumenes/:id muestra los de antes. */}
+        <Route path="/resumenes" element={<ResumenesPage />} />
         <Route path="/resumenes/:id" element={<ResumenIAPage />} />
         <Route path="/cuestionarios" element={<MaterialesIAPage key="cuestionario" tipo="cuestionario" />} />
         <Route path="/cuestionarios/:id" element={<CuestionarioIAPage />} />

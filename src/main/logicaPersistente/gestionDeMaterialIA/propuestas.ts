@@ -113,6 +113,31 @@ export function preguntasDeGuia(contenido: unknown): PreguntaGuia[] {
   return preguntas;
 }
 
+/**
+ * Resumen en HTML para el editor (Tiptap) y para convertir a .docx: título, ideas clave en lista
+ * y una sección (título + párrafos) por tema. Los saltos de línea dobles del contenido son párrafos.
+ */
+export function resumenAHtml(contenido: unknown): string {
+  const r = registro(contenido);
+  const titulo = texto(r.titulo) || 'Resumen';
+  const ideas = Array.isArray(r.ideasClave) ? r.ideasClave.map(texto).filter(Boolean) : [];
+  const secciones = Array.isArray(r.secciones) ? r.secciones.map(registro) : [];
+  if (ideas.length === 0 && secciones.length === 0) throw new Error('La IA no devolvió un resumen utilizable.');
+
+  const partes: string[] = [`<h1>${escapar(titulo)}</h1>`];
+  if (ideas.length) {
+    partes.push('<h2>Ideas clave</h2>', '<ul>', ...ideas.map((i) => `<li><p>${escapar(i)}</p></li>`), '</ul>');
+  }
+  for (const s of secciones) {
+    const tituloSeccion = texto(s.titulo);
+    if (tituloSeccion) partes.push(`<h2>${escapar(tituloSeccion)}</h2>`);
+    for (const parrafo of texto(s.contenido).split(/\n\s*\n/)) {
+      if (parrafo.trim()) partes.push(`<p>${escapar(parrafo.trim()).replace(/\n/g, '<br>')}</p>`);
+    }
+  }
+  return partes.join('\n');
+}
+
 export function guiaPreguntasAHtml(titulo: string, preguntas: PreguntaGuia[]): string {
   const partes: string[] = [`<h1>${escapar(titulo)}</h1>`];
   partes.push('<p>Respondé cada pregunta con tus palabras. Las respuestas modelo están al final del documento.</p>');

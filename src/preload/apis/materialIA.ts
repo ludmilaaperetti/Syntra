@@ -67,8 +67,9 @@ export const materialIAExtraApi = {
   extraerTextoPlan: (datos: { ruta: string }): Promise<{ nombre: string; texto: string }> =>
     ipcRenderer.invoke('materias:textoDePlan', datos),
 
-  // La IA transcribe el archivo del plan con el prompt indicado y devuelve el texto para el cuadro.
-  transcribirPlanIA: (datos: { trabajoId: string; ruta: string; prompt: string }): Promise<RespuestaTranscripcionIA> =>
+  // Si la app no pudo leer el texto (PDF escaneado o foto), la IA lee las páginas como imágenes
+  // (JPEG/PNG en base64) con el prompt indicado y devuelve el texto para el cuadro.
+  transcribirPlanIA: (datos: { trabajoId: string; nombre?: string; prompt: string; imagenes: string[] }): Promise<RespuestaTranscripcionIA> =>
     ipcRenderer.invoke('materias:transcribirPlanIA', datos),
 };
 

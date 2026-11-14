@@ -120,7 +120,13 @@ export class RouterModelos {
       const { tiempo, senal } = this.conTimeout(proveedor, pedido.signal);
       let texto: string;
       try {
-        texto = await proveedor.generarJson({ sistema: pedido.sistema, usuario, esquemaJson: pedido.esquemaJson, signal: senal });
+        texto = await proveedor.generarJson({
+          sistema: pedido.sistema,
+          usuario,
+          esquemaJson: pedido.esquemaJson,
+          signal: senal,
+          ...(pedido.imagenes?.length ? { imagenes: pedido.imagenes } : {}),
+        });
       } catch (e) {
         // Se cortó por NUESTRO timeout (no por el usuario): lo contamos como timeout, no como cancelación.
         if (tiempo.aborted && !pedido.signal?.aborted)

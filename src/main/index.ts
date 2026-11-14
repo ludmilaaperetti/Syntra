@@ -178,6 +178,7 @@ import { PortadasProyectos } from './administracionDePersistencia/portadasProyec
 import { registerPortadasProyectosIpc } from './ipc/portadasProyectos.ipc';
 import { ServicioIA } from './logicaNoPersistente/ia/servicioIA.js';
 import { GuardarGuiaPreguntas } from './logicaPersistente/gestionDeMaterialIA/guardarGuiaPreguntas';
+import { GuardarResumenIA } from './logicaPersistente/gestionDeMaterialIA/guardarResumenIA';
 
 // Estadísticas
 import { ResumenProyectos } from './logicaPersistente/gestionDeEstadisticas/resumenProyectos';
@@ -719,9 +720,10 @@ function wireDependencies(): ProcesoSesionEstudio {
     new EditarMapaMentalIA(persistencia, obtenerMaterialIA),
     new GuardarGuiaPreguntas(archivos, nodos, persistencia),
     servicioIA,
+    new GuardarResumenIA(archivos, nodos, persistencia),
   );
   registerMaterialIAIpc(materialIA);
-  registrarIpcPlanArchivo(generadorMaterial, ia.cola);
+  registrarIpcPlanArchivo(ia.router, ia.cola);
 
   // Chat con IA: usa el mismo router (GptMini → Gemma) y la misma cola; las conversaciones se guardan.
   const chatIA = new ChatIA(

@@ -50,6 +50,9 @@ function resolverDestino(baseURL: string, despliegue: string): Destino {
   return { baseURL: `${url.origin}/openai/deployments/${encodeURIComponent(despliegue)}`, apiVersion: API_VERSION_CLASICA };
 }
 
+// Los PNG en base64 empiezan con "iVBOR"; el resto se manda como JPEG.
+const tipoImagen = (b64: string) => (b64.startsWith('iVBOR') ? 'image/png' : 'image/jpeg');
+
 export class ProveedorGptMini implements ProveedorModelo {
   readonly id = 'gptMini';
   readonly tipo = 'online' as const;
@@ -80,7 +83,19 @@ export class ProveedorGptMini implements ProveedorModelo {
           model: this.cfg.despliegue, // nombre del despliegue, por ejemplo "gpt-5-mini"
           messages: [
             { role: 'system', content: p.sistema },
-            { role: 'user', content: p.usuario },
+            {
+              role: 'user',
+              // Con imágenes (plan escaneado), el texto y cada imagen van como partes del mismo mensaje.
+              content: p.imagenes?.length
+                ? [
+                    { type: 'text' as const, text: p.usuario },
+                    ...p.imagenes.map((b64) => ({
+                      type: 'image_url' as const,
+                      image_url: { url: `data:${tipoImagen(b64)};base64,${b64}` },
+                    })),
+                  ]
+                : p.usuario,
+            },
           ],
           // gpt-5-mini es de razonamiento: no se manda temperature ni max_tokens.
           response_format: {

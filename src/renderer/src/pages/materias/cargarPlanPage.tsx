@@ -8,6 +8,7 @@ import { usarAvisos } from '../../hooks/usarAvisos';
 import { obtenerUsuarioId } from '../../../lib/sesion';
 import { apiIA, nuevoTrabajoIA } from '../../utils/apiMaterialIA';
 import { IndicadorIA } from '../../components/materialIA/indicadorIA';
+import { EXTENSIONES_IMAGEN, imagenesDePlan } from '../../utils/imagenesDePlan';
 import type { Cuatrimestre, EstadoMateria, Formacion } from '../../types/materias';
 import { CUATRIMESTRES, ESTADOS, PROMPT_PLAN, estadoInicial, mensajeDeError } from './utilidadesMaterias';
 import { Pasos } from './formacionPage';
@@ -30,14 +31,6 @@ interface MateriaLeida {
   correlativas: string[];
 }
 
-type RespuestaTranscripcion =
-  | { ok: true; nombre: string; texto: string; proveedores?: string[] }
-  | { ok: false; causa: string; mensaje: string };
-
-interface ApiTranscripcion {
-  transcribirPlanIA?: (datos: { trabajoId: string; ruta: string; prompt: string }) => Promise<RespuestaTranscripcion>;
-}
-
 const separar = (texto: string) => texto.split(';').map((t) => t.trim()).filter(Boolean);
 const normalizar = (texto: string) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -56,6 +49,8 @@ export function CargarPlanPage() {
   const [error, setError] = useState('');
   const [trabajando, setTrabajando] = useState(false);
   const [leyendoArchivo, setLeyendoArchivo] = useState(false);
+  // Solo cuando ya la está leyendo la IA (para mostrar la animación de "Generando").
+  const [leyendoConIA, setLeyendoConIA] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const trabajoIA = useRef<ReturnType<typeof nuevoTrabajoIA> | null>(null);
   const entradaArchivo = useRef<HTMLInputElement>(null);
@@ -93,54 +88,57 @@ export function CargarPlanPage() {
     }
   }
 
-  // Carga del archivo: Primero prueba extracción local por sistema; si no funciona o es un escaneo, recurre a la IA automáticamente.
+  // Carga del archivo:
+  //  1. La app intenta sacar el texto sola (rápido, sin IA).
+  //  2. Si no puede (PDF escaneado o foto), la IA disponible lee las páginas como imágenes y el texto
+  //     aparece solo en el cuadro. Mientras la IA trabaja se ve la animación de "Generando" con Cancelar.
+  //  3. Después se revisa el texto y se toca "Leer plan".
   async function cargarArchivo(archivo: File | undefined): Promise<void> {
     if (!archivo || ocupado) return;
-    const ruta = window.api.rutaDeArchivo(archivo);
-    if (!ruta) return setError('No se pudo leer el archivo elegido.');
     setError('');
     setLeyendoArchivo(true);
-    trabajoIA.current = nuevoTrabajoIA();
-
     try {
-      let resultado: { nombre: string; texto: string } | null = null;
-      let errorLocal = '';
+      const extension = archivo.name.split('.').pop()?.toLowerCase() ?? '';
+      const ruta = window.api.rutaDeArchivo(archivo);
 
-      // 1. Intentamos primero la extracción local por el sistema (rápida)
-      try {
-        resultado = await apiIA().extraerTextoPlan({ ruta });
-      } catch (e) {
-        errorLocal = mensajeDeError(e, '');
-      }
-
-      // 2. Si la extracción local falló (por ejemplo, porque es un PDF escaneado sin texto seleccionable), recurrimos a la IA
-      if (!resultado) {
-        const transcribir = (apiIA() as unknown as ApiTranscripcion).transcribirPlanIA;
-        if (typeof transcribir === 'function') {
-          try {
-            const r = await transcribir({ trabajoId: trabajoIA.current.id, ruta, prompt: PROMPT_PLAN });
-            if (r.ok && r.texto.trim()) {
-              resultado = { nombre: r.nombre || archivo.name, texto: r.texto };
-            } else if (!r.ok) {
-              if (/cancel/i.test(r.causa)) return; // la persona canceló
-              errorLocal = r.mensaje || errorLocal;
-            }
-          } catch (e) {
-            errorLocal = mensajeDeError(e, errorLocal);
-          }
+      // 1. Sin IA (las fotos no tienen texto que leer: van directo a la IA).
+      if (ruta && !EXTENSIONES_IMAGEN.includes(extension)) {
+        try {
+          const r = await apiIA().extraerTextoPlan({ ruta });
+          setNombreArchivo(r.nombre);
+          setTexto(r.texto);
+          return;
+        } catch {
+          // Sin texto seleccionable: sigue con la IA.
         }
       }
 
-      if (!resultado) {
-        return setError(errorLocal || 'No se pudo extraer texto del archivo mediante el sistema ni mediante la IA.');
+      // 2. Con IA.
+      setLeyendoConIA(true);
+      const imagenes = await imagenesDePlan(archivo);
+      if (imagenes.length === 0) {
+        return setError('No se pudo leer el archivo. Probá con un PDF, una foto del plan o pegá el texto a mano.');
       }
-
-      setNombreArchivo(resultado.nombre);
-      setTexto(resultado.texto);
+      trabajoIA.current = nuevoTrabajoIA();
+      const r = await apiIA().transcribirPlanIA({ trabajoId: trabajoIA.current.id, nombre: archivo.name, prompt: PROMPT_PLAN, imagenes });
+      if (!r.ok) {
+        if (r.causa !== 'cancelado') setError(r.mensaje);
+        return;
+      }
+      setNombreArchivo(archivo.name);
+      setTexto(r.texto);
+      avisos.exito('La IA pasó el plan a texto. Revisalo y tocá "Leer plan".');
+    } catch (e) {
+      setError(mensajeDeError(e, 'No se pudo leer el archivo.'));
     } finally {
       trabajoIA.current = null;
+      setLeyendoConIA(false);
       setLeyendoArchivo(false);
     }
+  }
+
+  function cancelarLecturaIA(): void {
+    void trabajoIA.current?.cancelar();
   }
 
   async function copiarPrompt(): Promise<void> {
@@ -220,16 +218,16 @@ export function CargarPlanPage() {
             >
               <div>
                 <strong>Subí el archivo de tu plan</strong>
-                <span>PDF, Word (.docx) o texto. También podés arrastrarlo hasta acá.</span>
+                <span>PDF (también escaneado), Word (.docx), texto o una foto del plan. También podés arrastrarlo hasta acá.</span>
                 {nombreArchivo && <small>Archivo: {nombreArchivo}</small>}
               </div>
               <Boton variante="contorno" onClick={() => entradaArchivo.current?.click()} disabled={ocupado}>
-                <FileUp size={16} /> {leyendoArchivo ? 'Leyendo archivo…' : 'Elegir archivo'}
+                <FileUp size={16} /> {leyendoArchivo && !leyendoConIA ? 'Leyendo archivo…' : 'Elegir archivo'}
               </Boton>
               <input
                 ref={entradaArchivo}
                 type="file"
-                accept=".pdf,.docx,.txt,.md"
+                accept=".pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
                 hidden
                 onChange={(e) => {
                   const archivo = e.target.files?.[0];
@@ -239,11 +237,14 @@ export function CargarPlanPage() {
               />
             </div>
 
-            {leyendoArchivo && (
+            {leyendoConIA && (
               <>
-                <IndicadorIA mensaje="Leyendo archivo (sistema / IA)" detalle="Procesando el contenido del plan de estudios..." />
+                <IndicadorIA
+                  mensaje="Leyendo el plan con IA"
+                  detalle="La app no pudo leer el texto del archivo (parece escaneado). La IA lo está pasando a texto; puede tardar un poco."
+                />
                 <div className="materias-acciones">
-                  <Boton variante="contorno" onClick={() => void trabajoIA.current?.cancelar()}>Cancelar</Boton>
+                  <Boton variante="contorno" onClick={cancelarLecturaIA}>Cancelar generación</Boton>
                 </div>
               </>
             )}

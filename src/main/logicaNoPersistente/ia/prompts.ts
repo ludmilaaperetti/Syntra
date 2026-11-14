@@ -41,6 +41,15 @@ export const SISTEMA_MATERIAS =
   'correlativas: nombres de otras materias del mismo plan, tal como figuran en el plan; lista vacía si no tiene. ' +
   'Ignorá encabezados, pies de página, números de página y resoluciones. No repitas materias.';
  
+// ---------- Plan de estudios escaneado (lee imágenes) ----------
+// El pedido del usuario trae el formato exacto (PROMPT_PLAN de la pantalla). Acá solo las reglas fijas.
+export const SISTEMA_TRANSCRIPCION_PLAN =
+  'Pasás a texto planes de estudio que vienen como imágenes (PDF escaneado o foto). ' +
+  'Respondé solo con JSON que cumpla el esquema: el texto completo va en "texto". ' +
+  'Seguí EXACTAMENTE el formato que pide el usuario. Copiá los nombres de las materias tal como se leen en la imagen; ' +
+  'no inventes materias que no estén. No podés hacer preguntas: si hay varias carreras u orientaciones, ' +
+  'pasá las materias comunes y las de todas las orientaciones. Si no se puede leer ninguna materia, devolvé "texto" vacío.';
+
 export const SISTEMA_GUIA = `Sos un docente que prepara una guía de preguntas de estudio a partir del material que te dan.
   Devolvé preguntas abiertas que obliguen a comprender, no a copiar. Cada pregunta lleva su respuesta modelo, breve y fiel al material.
   Agrupá por tema: completá "tema" con el título de la sección de donde sale la pregunta, o null si no corresponde.

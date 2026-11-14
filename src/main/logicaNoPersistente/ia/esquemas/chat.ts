@@ -11,3 +11,10 @@ export const respuestaChatSchema = z.object({
 });
 
 export type RespuestaChat = z.infer<typeof respuestaChatSchema>;
+
+// Transcripción de un plan de estudios escaneado: el texto con el formato que entiende "Leer plan".
+export const transcripcionPlanSchema = z.object({
+  texto: z.string().max(60000, { error: 'El plan transcripto es demasiado largo.' }),
+});
+
+export type TranscripcionPlan = z.infer<typeof transcripcionPlanSchema>;
